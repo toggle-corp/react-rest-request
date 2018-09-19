@@ -1,12 +1,4 @@
-// Utils
-
-const isFalsy = val => (
-    val === undefined || val === null || Number.isNaN(val) || val === false
-);
-
-const isTruthy = val => !isFalsy(val);
-
-const noOp = () => {};
+import { isTruthy, noOp, resolve } from './utils';
 
 const createWarningFn = text => (response) => {
     console.warn(text);
@@ -16,11 +8,13 @@ const createWarningFn = text => (response) => {
 };
 
 export default class RestRequest {
-    static POST = 'POST';
-    static GET = 'GET';
-    static PUT = 'PUT';
-    static DELETE = 'DELETE';
-    static PATCH = 'PATCH';
+    static methods = {
+        POST: 'POST',
+        GET: 'GET',
+        PUT: 'PUT',
+        DELETE: 'DELETE',
+        PATCH: 'PATCH',
+    };
 
     static jsonHeaders = {
         Accept: 'application/json',
@@ -120,8 +114,8 @@ export default class RestRequest {
 
     internalStart = async () => {
         // Parameters can be a key-value pair or a function that returns a key-value pair
-        this.parameters = typeof this.params === 'function' ? this.params(this.key) : this.params;
-        this.urlValue = typeof this.url === 'function' ? this.url(this.key) : this.url;
+        this.parameters = resolve(this.params, this.key);
+        this.urlValue = resolve(this.url, this.key);
 
         if (this.aborted) {
             this.abort(this.key);
