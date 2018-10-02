@@ -23,3 +23,12 @@ export const identity = x => x;
 export const resolve = (variable, ...args) => (
     typeof variable === 'function' ? variable(...args) : variable
 );
+
+export const randomString = (length = 8) => {
+    let text = '';
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for (let i = 0; i < length; i += 1) {
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    return text;
+};

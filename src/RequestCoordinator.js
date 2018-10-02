@@ -1,258 +1,177 @@
-import PropTypes from 'prop-types';
 import React from 'react';
 import hoistNonReactStatics from 'hoist-non-react-statics';
 
-import { mapToList, noOp, identity, resolve } from './utils';
+import { identity } from './utils';
 import RestRequest from './RestRequest';
 import RequestContext from './RequestContext';
 
-
 const emptyObject = {};
-
-export const RestApiPropType = PropTypes.shape({
-    request: PropTypes.func.isRequired,
-    get: PropTypes.func.isRequired,
-    post: PropTypes.func.isRequired,
-});
 
 export const createRequestCoordinator = ({
     transformParams = identity,
-    /* TODO
     transformResponse = identity,
     transformErrors = identity,
-    */
-} = {}) => (mapPropsToRequest = emptyObject, consumeAll = true) => {
-    const propsBasedRequests = mapToList(
-        mapPropsToRequest,
-        (element, key) => ({ ...element, key }),
-    );
+    transformProps = identity,
+} = {}) => (WrappedComponent) => {
+    class View extends React.PureComponent {
+        constructor(props) {
+            super(props);
 
-    return (WrappedComponent) => {
-        class View extends React.PureComponent {
-            constructor(props) {
-                super(props);
+            this.mounted = false;
+            this.requests = {};
+            this.state = {};
+        }
 
-                this.restApi = {
-                    request: this.request,
-                    get: this.createRequestFor(RestRequest.GET),
-                    post: this.createRequestFor(RestRequest.POST),
-                    put: this.createRequestFor(RestRequest.PUT),
-                    patch: this.createRequestFor(RestRequest.PATCH),
-                    delete: this.createRequestFor(RestRequest.DELETE),
-                };
+        componentDidMount() {
+            this.mounted = true;
+            this.forEachRequest(request => request.start());
+        }
 
-                this.requests = {};
-                this.requestPending = {};
-                this.requestData = {};
+        componentWillUnmount() {
+            this.forEachRequest(request => request.stop());
+            this.mounted = false;
+        }
 
-                this.state = {};
-                propsBasedRequests.forEach(({ key, id: idVar }) => {
-                    const id = resolve(idVar) || key;
-                    if (!this.requestPending[key]) {
-                        this.requestPending[key] = {};
-                    }
-                    this.requestPending[key][id] = true;
+        forEachRequest = (callback) => {
+            Object.keys(this.requests).forEach((key) => {
+                callback(this.requests[key]);
+            });
+        }
 
-                    const pendingKey = `${key}Pending`;
-                    this.state[pendingKey] = true;
-                });
+        startRequest = (requestData, ignoreIfExists) => {
+            const {
+                method,
+                key,
+                url,
+                query,
+                body,
+            } = requestData;
 
-                this.mounted = false;
-            }
+            const oldRequest = this.requests[key];
 
-            componentDidMount() {
-                this.forEachRequest(request => request.start());
-                this.mounted = true;
-
-                propsBasedRequests.forEach(({ key, map }) => {
-                    this.restApi.request(key, resolve(map, this.props));
-                });
-            }
-
-            componentWillReceiveProps(nextProps) {
-                propsBasedRequests.forEach(({ key, map, dependencies = [] }) => {
-                    if (dependencies.find(d => this.props[d] !== nextProps[d])) {
-                        this.restApi.request(key, resolve(map, nextProps));
-                    }
-                });
-            }
-
-            componentWillUnmount() {
-                this.mounted = false;
-                this.forEachRequest(request => request.stop());
-            }
-
-            forEachRequest = (callback) => {
-                Object.keys(this.requests).forEach((key) => {
-                    Object.keys(this.requests[key]).forEach((id) => {
-                        callback(this.requests[key][id]);
-                    });
-                });
-            }
-
-            createRequestFor = method => (key, { ...args }) => (
-                this.request(key, { ...args, method })
-            )
-
-            request = (key, requestData) => {
-                const {
-                    url: urlVar,
-                    id: idVar,
-                    method: methodVar,
-                    body: bodyVar,
-                    query: queryVar,
-                    params: paramsVar = {},
-                    onSuccess = noOp,
-                    onFailure = noOp,
-                } = requestData;
-
-                let url = resolve(urlVar);
-
-                if (queryVar) {
-                    const query = resolve(queryVar);
-                    const queryString = RestRequest.prepareUrlParams(query);
-                    url = `${url}?${queryString}`;
+            if (oldRequest && oldRequest.running) {
+                if (ignoreIfExists) {
+                    return;
                 }
+                oldRequest.stop();
+            }
 
-                const id = resolve(idVar) || key;
-
-                // We use params as a function so that it is recalculated
-                // on every retry of the request.
-                // For example the transformParams, which may fetch latest
-                // authorization token, may need to be called every time.
-                const recalculateParams = () => {
-                    const params = {
-                        headers: RestRequest.jsonHeaders,
-                        ...transformParams(resolve(paramsVar), this.props),
-                    };
-                    if (bodyVar) {
-                        params.body = JSON.stringify(resolve(bodyVar));
-                    }
-                    params.method = resolve(methodVar) || RestRequest.GET;
-                    return params;
-                };
-
-                const uniqueKey = !idVar ? key : `${key}-${id}`;
-                this.requestData[uniqueKey] = {
-                    key,
-                    id,
-                    url,
-                    params: recalculateParams,
-                    onSuccess,
-                    onFailure,
-                };
-
-                if (!this.requests[key]) {
-                    this.requests[key] = {};
+            const calculateParams = () => {
+                const params = { headers: RestRequest.jsonHeaders };
+                if (body) {
+                    params.body = JSON.stringify(body);
                 }
+                return transformParams(params, this.props);
+            };
 
-                if (!this.requestPending[key]) {
-                    this.requestPending[key] = {};
-                }
+            const preparedUrl = !query ? url : `${url}?${RestRequest.prepareUrlParams(query)}`;
 
-                if (this.requests[key][id]) {
-                    this.requests[key][id].stop();
-                }
+            const request = new RestRequest({
+                method,
+                key,
+                url: preparedUrl,
+                params: calculateParams,
+                onPreLoad: this.handlePreLoad,
+                onPostLoad: this.handlePostLoad,
+                onAbort: this.handleAbort,
+                onSuccess: this.handleSuccess,
+                onFailure: this.handleFailure,
+                onFatal: this.handleFatal,
+            });
 
-                const newRequest = new RestRequest({
-                    key: uniqueKey,
-                    url,
-                    params: recalculateParams,
-                    onPreLoad: this.handlePreLoad,
-                    onPostLoad: this.handlePostLoad,
-                    onAbort: this.handleAbort,
-                    onSuccess: this.handleSuccess,
-                    onFailure: this.handleFailure,
-                    onFatal: this.handleFatal,
-                });
+            this.requests[key] = {
+                data: requestData,
+                running: false,
+                stop: () => {
+                    request.stop();
+                    this.requests[key].running = false;
+                },
+                start: () => {
+                    this.requests[key].running = true;
+                    request.start();
+                },
+            };
 
-                this.requests[key][id] = newRequest;
-
-                this.setState({
-                    [`${uniqueKey}Error`]: undefined,
-                    [uniqueKey]: undefined,
-                }, () => {
-                    if (this.mounted) {
-                        newRequest.start();
-                    }
-                });
-            }
-
-            refreshPending = (key) => {
-                const isPending = Object.keys(this.requestPending[key]).some(id =>
-                    this.requestPending[key][id]);
-                const pendingKey = `${key}Pending`;
-                if (this.state[pendingKey] !== isPending) {
-                    this.setState({ [pendingKey]: isPending });
-                }
-            }
-
-            handlePreLoad = (uniqueKey) => {
-                const { key, id } = this.requestData[uniqueKey];
-                this.requestPending[key][id] = true;
-                this.refreshPending(key);
-            }
-
-            handlePostLoad = (uniqueKey) => {
-                const { key, id } = this.requestData[uniqueKey];
-                this.requestPending[key][id] = false;
-                this.refreshPending(key);
-            }
-
-            handleAbort = (uniqueKey) => {
-                const { key, id } = this.requestData[uniqueKey];
-                this.requestPending[key][id] = false;
-                this.refreshPending(key);
-            }
-
-            handleSuccess = (uniqueKey, body, status) => {
-                const { onSuccess } = this.requestData[uniqueKey];
-                onSuccess(body, status);
-
-                this.setState({
-                    [uniqueKey]: body,
-                });
-            }
-
-            handleFailure = (uniqueKey, body, status) => {
-                const { onFailure } = this.requestData[uniqueKey];
-                onFailure(body, status);
-
-                this.setState({
-                    [`${uniqueKey}Error`]: body,
-                });
-            }
-
-            handleFatal = (uniqueKey, error) => {
-                this.setState({
-                    [`${uniqueKey}Error`]: error,
-                });
-            }
-
-            render() {
-                const props = consumeAll ? {
-                    ...this.state,
-                    ...this.props,
-                } : this.props;
-
-                this.contextApi = { ...this.state };
-
-                return (
-                    <RequestContext.Provider value={this.contextApi}>
-                        <WrappedComponent
-                            restApi={this.restApi}
-                            {...props}
-                        />
-                    </RequestContext.Provider>
-                );
+            if (this.mounted) {
+                this.requests[key].start();
             }
         }
 
-        return hoistNonReactStatics(
-            View,
-            WrappedComponent,
-        );
-    };
+        handlePreLoad = (key) => {
+            const newState = { pending: true };
+            this.setState({ [key]: newState });
+        }
+
+        handlePostLoad = (key) => {
+            const requestState = this.state[key] || emptyObject;
+            const newState = { ...requestState };
+            newState.pending = false;
+            this.setState({ [key]: newState });
+        }
+
+        handleAbort = (key) => {
+            const requestState = this.state[key] || emptyObject;
+            const newState = { ...requestState };
+            newState.pending = false;
+            this.setState({ [key]: newState });
+        }
+
+        handleSuccess = (key, body, status) => {
+            const { onSuccess } = this.requests[key].data;
+            if (onSuccess) {
+                onSuccess(transformResponse(body), status);
+            }
+
+            const requestState = this.state[key] || emptyObject;
+            const newState = { ...requestState };
+            newState.response = transformResponse(body);
+            newState.responseStatus = status;
+            this.setState({ [key]: newState });
+        }
+
+        handleFailure = (key, body, status) => {
+            const { onFailure } = this.requests[key].data;
+            if (onFailure) {
+                onFailure(transformErrors(body), status);
+            }
+
+            const requestState = this.state[key] || emptyObject;
+            const newState = { ...requestState };
+            newState.responseError = transformErrors(body);
+            newState.responseStatus = status;
+            this.setState({ [key]: newState });
+        }
+
+        handleFatal = (key, error) => {
+            const { onFatal } = this.requests[key].data;
+            if (onFatal) {
+                onFatal(error);
+            }
+
+            const requestState = this.state[key] || emptyObject;
+            const newState = { ...requestState };
+            newState.responseError = error;
+            this.setState({ [key]: newState });
+        }
+
+        render() {
+            const contextApi = {
+                startRequest: this.startRequest,
+                state: { ...this.state },
+            };
+
+            return (
+                <RequestContext.Provider value={contextApi}>
+                    <WrappedComponent {...transformProps(this.props)} />
+                </RequestContext.Provider>
+            );
+        }
+    }
+
+    return hoistNonReactStatics(
+        View,
+        WrappedComponent,
+    );
 };
 
 export default createRequestCoordinator();
