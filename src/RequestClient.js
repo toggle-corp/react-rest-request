@@ -1,26 +1,26 @@
 import React from 'react';
 import hoistNonReactStatics from 'hoist-non-react-statics';
 
-import { randomString, resolve } from './utils';
+import { randomString, resolve, capitalize } from './utils';
 import RequestContext from './RequestContext';
 
 const emptyObject = {};
 
-export const createRequestClient = () => (mapToRequests = {}, consume) => {
+export const createRequestClient = () => (requests = {}, consume) => {
     const uniqueKey = randomString(16);
 
-    const requestKeys = Object.keys(mapToRequests);
+    const requestKeys = Object.keys(requests);
     const coordinatorKeys = requestKeys.reduce((acc, key) => ({
         ...acc,
-        [key]: mapToRequests[key].isUnique ? key : `${uniqueKey}-${key}`,
+        [key]: requests[key].isUnique ? key : `${uniqueKey}-${key}`,
     }), {});
 
     const requestsOnMount = requestKeys.filter(key =>
-        mapToRequests[key].onMount);
+        requests[key].onMount);
     const requestsOnProps = requestKeys.filter(key =>
-        mapToRequests[key].onPropsChanged);
+        requests[key].onPropsChanged);
     const requestsToCall = requestKeys.filter(key =>
-        mapToRequests[key].callProp);
+        requests[key].callProp);
 
     const requestsConsumed = consume || requestKeys;
 
@@ -39,20 +39,20 @@ export const createRequestClient = () => (mapToRequests = {}, consume) => {
 
                 this.constantProps = requestsToCall.reduce((acc, key) => ({
                     ...acc,
-                    [`${mapToRequests[key]}Call`]: params => this.startRequest(key, params),
+                    [`do${capitalize(requests[key])}`]: params => this.startRequest(key, params),
                 }), {});
             }
 
             componentDidMount() {
                 this.beforeMountOverrides = {};
                 requestsOnMount.forEach(key =>
-                    this.startRequest(key, undefined, mapToRequests[key].isUnique));
+                    this.startRequest(key, undefined, requests[key].isUnique));
             }
 
             componentDidUpdate(prevProps) {
                 // For each request that depends on props:
                 requestsOnProps.forEach((key) => {
-                    const propNames = mapToRequests[key].onPropsChanged;
+                    const propNames = requests[key].onPropsChanged;
 
                     // For each prop on which the request depends,
                     // if there is one that has been updated,
@@ -66,7 +66,7 @@ export const createRequestClient = () => (mapToRequests = {}, consume) => {
             }
 
             startRequest = (key, params, ignoreIfExists) => {
-                const request = mapToRequests[key];
+                const request = requests[key];
                 const r = arg => resolve(arg, this.props, params);
 
                 this.api.startRequest({

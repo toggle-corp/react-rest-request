@@ -20,6 +20,8 @@ export const mapToList = (obj = {}, modifier) => (
 export const noOp = () => {};
 export const identity = x => x;
 
+export const capitalize = str => str.charAt(0).toUpperCase() + str.substring(1);
+
 export const resolve = (variable, ...args) => (
     typeof variable === 'function' ? variable(...args) : variable
 );
