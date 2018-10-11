@@ -88,6 +88,7 @@ export default class RestRequest {
         this.afterLoad = onAfterLoad || noOp;
 
         this.aborted = false;
+        this.requestCompleted = false;
 
         // Polling:
 
@@ -118,7 +119,6 @@ export default class RestRequest {
         this.urlValue = resolve(this.url, this.key);
 
         if (this.aborted) {
-            this.abort(this.key);
             return;
         }
 
@@ -129,12 +129,10 @@ export default class RestRequest {
         try {
             response = await fetch(this.urlValue, this.parameters);
             if (this.aborted) {
-                this.abort(this.key);
                 return;
             }
         } catch (ex) {
             if (this.aborted) {
-                this.abort(this.key);
                 return;
             }
 
@@ -154,7 +152,6 @@ export default class RestRequest {
         try {
             responseBody = await response.text();
             if (this.aborted) {
-                this.abort(this.key);
                 return;
             }
 
@@ -165,7 +162,6 @@ export default class RestRequest {
             }
         } catch (ex) {
             if (this.aborted) {
-                this.abort(this.key);
                 return;
             }
 
@@ -193,12 +189,18 @@ export default class RestRequest {
     }
 
     stop = () => {
+        if (this.requestCompleted) {
+            return;
+        }
+
         clearTimeout(this.pollId);
         clearTimeout(this.retryId);
 
         this.pollCount = 1;
         this.retryCount = 1;
         this.aborted = true;
+
+        this.abort(this.key);
     }
 
     retry = () => {
@@ -222,48 +224,36 @@ export default class RestRequest {
     }
 
     handleSuccess = (...attrs) => {
-        this.postLoad(this.key);
         if (this.aborted) {
-            this.abort(this.key);
             return;
         }
 
+        this.requestCompleted = true;
+        this.postLoad(this.key);
         this.success(this.key, ...attrs);
-        if (this.aborted) {
-            this.abort(this.key);
-            return;
-        }
         this.afterLoad(this.key);
     }
 
 
     handleFailure = (...attrs) => {
-        this.postLoad(this.key);
         if (this.aborted) {
-            this.abort(this.key);
             return;
         }
 
+        this.requestCompleted = true;
+        this.postLoad(this.key);
         this.failure(this.key, ...attrs);
-        if (this.aborted) {
-            this.abort(this.key);
-            return;
-        }
         this.afterLoad(this.key);
     }
 
     handleFatal = (...attrs) => {
-        this.postLoad(this.key);
         if (this.aborted) {
-            this.abort(this.key);
             return;
         }
 
+        this.requestCompleted = true;
+        this.postLoad(this.key);
         this.fatal(this.key, ...attrs);
-        if (this.aborted) {
-            this.abort(this.key);
-            return;
-        }
         this.afterLoad(this.key);
     }
 }

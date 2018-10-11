@@ -12,6 +12,7 @@ export const createRequestCoordinator = ({
     transformResponse = identity,
     transformErrors = identity,
     transformProps = identity,
+    transformUrl = identity,
 } = {}) => (WrappedComponent) => {
     class View extends React.PureComponent {
         constructor(props) {
@@ -69,10 +70,10 @@ export const createRequestCoordinator = ({
             const request = new RestRequest({
                 method,
                 key,
-                url: preparedUrl,
+                url: transformUrl(preparedUrl, this.props),
                 params: calculateParams,
                 onPreLoad: this.handlePreLoad,
-                onPostLoad: this.handlePostLoad,
+                onAfterLoad: this.handleAfterLoad,
                 onAbort: this.handleAbort,
                 onSuccess: this.handleSuccess,
                 onFailure: this.handleFailure,
@@ -102,7 +103,7 @@ export const createRequestCoordinator = ({
             this.setState({ [key]: newState });
         }
 
-        handlePostLoad = (key) => {
+        handleAfterLoad = (key) => {
             const requestState = this.state[key] || emptyObject;
             const newState = { ...requestState };
             newState.pending = false;
