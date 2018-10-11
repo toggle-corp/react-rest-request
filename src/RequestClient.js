@@ -39,7 +39,7 @@ export const createRequestClient = () => (requests = {}, consume) => {
 
                 this.constantProps = requestsToCall.reduce((acc, key) => ({
                     ...acc,
-                    [`do${capitalize(requests[key])}`]: params => this.startRequest(key, params),
+                    [`do${capitalize(key)}`]: params => this.startRequest(key, params),
                 }), {});
             }
 
