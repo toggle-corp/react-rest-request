@@ -19,8 +19,6 @@ export const createRequestClient = () => (requests = {}, consume) => {
         requests[key].onMount);
     const requestsOnProps = requestKeys.filter(key =>
         requests[key].onPropsChanged);
-    const requestsToCall = requestKeys.filter(key =>
-        requests[key].callProp);
 
     const requestsConsumed = consume || requestKeys;
 
@@ -37,7 +35,7 @@ export const createRequestClient = () => (requests = {}, consume) => {
                     },
                 }), {});
 
-                this.constantProps = requestsToCall.reduce((acc, key) => ({
+                this.constantProps = requestKeys.reduce((acc, key) => ({
                     ...acc,
                     [`do${capitalize(key)}`]: params => this.startRequest(key, params),
                 }), {});
