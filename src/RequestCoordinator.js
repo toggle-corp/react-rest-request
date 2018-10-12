@@ -21,6 +21,7 @@ export const createRequestCoordinator = ({
             this.mounted = false;
             this.requests = {};
             this.state = {};
+            this.requestGroups = {};
         }
 
         componentDidMount() {
@@ -43,6 +44,7 @@ export const createRequestCoordinator = ({
             const {
                 method,
                 key,
+                group,
                 url,
                 query,
                 body,
@@ -95,6 +97,12 @@ export const createRequestCoordinator = ({
                 },
             };
 
+            if (!this.requestGroups[group]) {
+                this.requestGroups[group] = [key];
+            } else {
+                this.requestGroups[group].push(key);
+            }
+
             if (this.mounted) {
                 this.requests[key].start();
             }
@@ -102,45 +110,64 @@ export const createRequestCoordinator = ({
 
         handlePreLoad = (key) => {
             const newState = { pending: true };
-            this.setState({ [key]: newState });
+
+            // Calculate group state
+            const { data: { group } } = this.requests[key];
+            const groupState = group ? { [group]: { pending: true } } : emptyObject;
+
+            this.setState({ [key]: newState, ...groupState });
+        }
+
+        handleRequestDone = (key) => {
+            const requestState = this.state[key] || emptyObject;
+            const newState = { ...requestState };
+            newState.pending = false;
+
+            // Calculate group state
+            const { data: { group } } = this.requests[key];
+            const groupState = group ? {
+                pending: this.requestGroups[group]
+                    .filter(k => k !== key)
+                    .some(k => this.state[k].pending),
+            } : emptyObject;
+
+            this.setState({ [key]: newState, ...groupState });
         }
 
         handleAfterLoad = (key) => {
-            const requestState = this.state[key] || emptyObject;
-            const newState = { ...requestState };
-            newState.pending = false;
-            this.setState({ [key]: newState });
+            this.handleRequestDone(key);
         }
 
         handleAbort = (key) => {
-            const requestState = this.state[key] || emptyObject;
-            const newState = { ...requestState };
-            newState.pending = false;
-            this.setState({ [key]: newState });
+            this.handleRequestDone(key);
         }
 
         handleSuccess = (key, body, status) => {
             const { onSuccess } = this.requests[key].data;
+            const response = transformResponse(body);
+
             if (onSuccess) {
-                onSuccess(transformResponse(body), status);
+                onSuccess({ response, status });
             }
 
             const requestState = this.state[key] || emptyObject;
             const newState = { ...requestState };
-            newState.response = transformResponse(body);
+            newState.response = response;
             newState.responseStatus = status;
             this.setState({ [key]: newState });
         }
 
         handleFailure = (key, body, status) => {
             const { onFailure } = this.requests[key].data;
+            const error = transformErrors(body);
+
             if (onFailure) {
-                onFailure(transformErrors(body), status);
+                onFailure({ error, status });
             }
 
             const requestState = this.state[key] || emptyObject;
             const newState = { ...requestState };
-            newState.responseError = transformErrors(body);
+            newState.responseError = error;
             newState.responseStatus = status;
             this.setState({ [key]: newState });
         }
@@ -148,7 +175,7 @@ export const createRequestCoordinator = ({
         handleFatal = (key, error) => {
             const { onFatal } = this.requests[key].data;
             if (onFatal) {
-                onFatal(error);
+                onFatal({ error });
             }
 
             const requestState = this.state[key] || emptyObject;

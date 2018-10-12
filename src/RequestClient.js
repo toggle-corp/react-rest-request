@@ -87,18 +87,18 @@ export const createRequestClient = () => (requests = {}, consume) => {
 
                 this.api.startRequest({
                     key: coordinatorKeys[key],
+                    group: r(request.group),
                     method: r(request.method),
                     url: r(request.url),
                     query: r(request.query),
                     body: r(request.body),
-                    onSuccess: request.onSuccess,
-                    onFailure: request.onFailure,
-                    onFatal: request.onFatal,
+                    onSuccess: args => request.onSuccess({ props, params, ...args }),
+                    onFailure: args => request.onFailure({ props, params, ...args }),
+                    onFatal: args => request.onFatal({ props, params, ...args }),
                 }, ignoreIfExists);
             }
 
-            // Warning: following object should not create
-            // new values every time.
+            // Warning: props should not be created every time.
             calculateProps = () => ({
                 ...requestsConsumed.reduce((acc, key) => ({
                     ...acc,
