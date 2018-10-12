@@ -86,7 +86,7 @@ export const createRequestClient = () => (requests = {}, consume) => {
                 // is not created every time.
                 ...requestsConsumed.reduce((acc, key) => ({
                     ...acc,
-                    [key]: this.api.state[coordinatorKeys[key]] || emptyObject,
+                    [key]: this.api.state[coordinatorKeys[key] || key] || emptyObject,
                 }), {}),
 
                 ...this.constantProps,
