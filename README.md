@@ -4,7 +4,9 @@ A powerful request library for react apps to coordinate requests in a page in an
 
 ## Installation
 
-TODO
+```
+yarn add @togglecorp/react-rest-request
+```
 
 ## Setting up
 
@@ -67,16 +69,16 @@ const requestProps = {
         onPropsChanged: ['userId'],
 
         // Each of these properties can be a function or a value.
-        // The function takes (props, params) as its arguments.
+        // The function takes ({ props, params }) as its arguments.
         // Where params is some custom paramters passed when making the request.
         method: requestMethods.GET,
-        url: props => `/api/users/${props.userId}/`,
+        url: ({ props }) => `/api/users/${props.userId}/`,
     },
 
     userSaveRequest: {
         method: requestMethods.POST,
-        url: props => `/api/users/${props.userId}/`,
-        body: (props, params) => params,
+        url: ({ props }) => `/api/users/${props.userId}/`,
+        body: ({ props, params }) => params.user,
     },
 };
 
@@ -88,9 +90,9 @@ class UserForm extends React.PureComponent {
     handleSave = () => {
         const { formData } = this.state;
 
-        // Actual method to do the request is available through the prop:
-        // `do{requestProp}` where the requestProp is capitalized.
-        this.props.doUserSaveRequest(formData);
+        // Actual method to do the request is available through:
+        // `{requestProp}.do`
+        this.props.userSaveRequest.do({ user: formData });
     }
 
     render() {
@@ -107,4 +109,6 @@ class UserForm extends React.PureComponent {
 }
 ```
 
-TODO: communicating requests across clients and request groups.
+### Sharing requests
+
+TODO
