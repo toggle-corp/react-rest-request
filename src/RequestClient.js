@@ -15,10 +15,8 @@ export const createRequestClient = () => (requests = {}, consume) => {
         [key]: requests[key].isUnique ? key : `${uniqueKey}-${key}`,
     }), {});
 
-    const requestsOnMount = requestKeys.filter(key =>
-        requests[key].onMount);
-    const requestsOnProps = requestKeys.filter(key =>
-        requests[key].onPropsChanged);
+    const requestsOnMount = requestKeys.filter(key => requests[key].onMount);
+    const requestsOnProps = requestKeys.filter(key => requests[key].onPropsChanged);
 
     const requestsConsumed = consume || requestKeys;
 
@@ -27,24 +25,24 @@ export const createRequestClient = () => (requests = {}, consume) => {
             constructor(props) {
                 super(props);
 
-                // Can be optimized by filtering out not consumed keys
-                this.beforeMountOverrides = requestsOnMount.reduce((acc, key) => ({
-                    ...acc,
-                    [key]: {
-                        pending: true,
-                    },
-                }), {});
+                this.beforeMountOverrides = requestsOnMount
+                    .filter(key => requestsConsumed.indexOf(key) >= 0)
+                    .reduce((acc, key) => ({
+                        ...acc,
+                        [key]: {
+                            pending: true,
+                        },
+                    }), {});
 
-                this.constantProps = requestKeys.reduce((acc, key) => ({
-                    ...acc,
-                    [`do${capitalize(key)}`]: params => this.startRequest(key, params),
-                }), {});
+                this.lastProps = {};
+                this.newProps = {};
             }
 
             componentDidMount() {
                 this.beforeMountOverrides = {};
-                requestsOnMount.forEach(key =>
-                    this.startRequest(key, undefined, requests[key].isUnique));
+                requestsOnMount.forEach(
+                    key => this.startRequest(key, undefined, requests[key].isUnique),
+                );
             }
 
             componentDidUpdate(prevProps) {
@@ -55,12 +53,31 @@ export const createRequestClient = () => (requests = {}, consume) => {
                     // For each prop on which the request depends,
                     // if there is one that has been updated,
                     // make the request (again).
-                    const isPropModifed = propNames.some(propName =>
-                        this.props[propName] !== prevProps[propName]);
+                    const isPropModifed = propNames.some(
+                        propName => this.props[propName] !== prevProps[propName],
+                    );
                     if (isPropModifed) {
                         this.startRequest(key);
                     }
                 });
+            }
+
+            getPropFor = (key) => {
+                // Props need to be memoized.
+                // Make sure that prop is not created every time
+                // and is only changed when state[accessKey] is changed.
+
+                const accessKey = coordinatorKeys[key] || key;
+                const prop = this.api.state[accessKey] || emptyObject;
+                if (this.lastProps[key] === prop) {
+                    return this.newProps[key];
+                }
+
+                this.newProps[key] = {
+                    ...prop,
+                    do: params => this.startRequest(key, params),
+                };
+                return this.newProps[key];
             }
 
             startRequest = (key, params, ignoreIfExists) => {
@@ -82,14 +99,11 @@ export const createRequestClient = () => (requests = {}, consume) => {
             // Warning: following object should not create
             // new values every time.
             calculateProps = () => ({
-                // This won't create new values as long as the api state[key]
-                // is not created every time.
                 ...requestsConsumed.reduce((acc, key) => ({
                     ...acc,
-                    [key]: this.api.state[coordinatorKeys[key] || key] || emptyObject,
+                    [key]: this.getPropFor(key),
                 }), {}),
 
-                ...this.constantProps,
                 ...this.beforeMountOverrides,
                 ...this.props,
             });
