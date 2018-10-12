@@ -1,7 +1,7 @@
 import React from 'react';
 import hoistNonReactStatics from 'hoist-non-react-statics';
 
-import { randomString, resolve, capitalize } from './utils';
+import { randomString, resolve } from './utils';
 import RequestContext from './RequestContext';
 
 const emptyObject = {};
@@ -81,8 +81,9 @@ export const createRequestClient = () => (requests = {}, consume) => {
             }
 
             startRequest = (key, params, ignoreIfExists) => {
+                const { props } = this;
                 const request = requests[key];
-                const r = arg => resolve(arg, this.props, params);
+                const r = arg => resolve(arg, { props, params });
 
                 this.api.startRequest({
                     key: coordinatorKeys[key],
