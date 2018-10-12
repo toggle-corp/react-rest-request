@@ -84,6 +84,7 @@ export const createRequestClient = () => (requests = {}, consume) => {
                 const { props } = this;
                 const request = requests[key];
                 const r = arg => resolve(arg, { props, params });
+                const rMethod = method => method && (args => method({ props, params, ...args }));
 
                 this.api.startRequest({
                     key: coordinatorKeys[key],
@@ -92,9 +93,9 @@ export const createRequestClient = () => (requests = {}, consume) => {
                     url: r(request.url),
                     query: r(request.query),
                     body: r(request.body),
-                    onSuccess: args => request.onSuccess({ props, params, ...args }),
-                    onFailure: args => request.onFailure({ props, params, ...args }),
-                    onFatal: args => request.onFatal({ props, params, ...args }),
+                    onSuccess: rMethod(request.onSuccess),
+                    onFailure: rMethod(request.onFailure),
+                    onFatal: rMethod(request.onFatal),
                 }, ignoreIfExists);
             }
 
