@@ -58,7 +58,10 @@ export const createRequestCoordinator = ({
             }
 
             const calculateParams = () => {
-                const params = { headers: RestRequest.jsonHeaders };
+                const params = {
+                    method,
+                    headers: RestRequest.jsonHeaders,
+                };
                 if (body) {
                     params.body = JSON.stringify(body);
                 }
@@ -68,7 +71,6 @@ export const createRequestCoordinator = ({
             const preparedUrl = !query ? url : `${url}?${RestRequest.prepareUrlParams(query)}`;
 
             const request = new RestRequest({
-                method,
                 key,
                 url: transformUrl(preparedUrl, this.props),
                 params: calculateParams,
