@@ -113,7 +113,11 @@ export const createRequestCoordinator = ({
 
             // Calculate group state
             const { data: { group } } = this.requests[key];
-            const groupState = group ? { [group]: { pending: true } } : emptyObject;
+            const groupState = group ? {
+                [group]: {
+                    pending: true,
+                },
+            } : emptyObject;
 
             this.setState({ [key]: newState, ...groupState });
         }
@@ -126,9 +130,11 @@ export const createRequestCoordinator = ({
             // Calculate group state
             const { data: { group } } = this.requests[key];
             const groupState = group ? {
-                pending: this.requestGroups[group]
-                    .filter(k => k !== key)
-                    .some(k => this.state[k].pending),
+                [group]: {
+                    pending: this.requestGroups[group]
+                        .filter(k => k !== key)
+                        .some(k => this.state[k].pending),
+                },
             } : emptyObject;
 
             this.setState({ [key]: newState, ...groupState });
