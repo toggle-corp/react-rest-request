@@ -76,8 +76,13 @@ export const createRequestClient = () => (requests = {}, consume) => {
                 this.newProps[key] = {
                     ...prop,
                     do: params => this.startRequest(key, params),
+                    abort: () => this.stopRequest(key),
                 };
                 return this.newProps[key];
+            }
+
+            stopRequest = (key) => {
+                this.api.stopRequest(key);
             }
 
             startRequest = (key, params, ignoreIfExists) => {

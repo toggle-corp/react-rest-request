@@ -40,6 +40,13 @@ export const createRequestCoordinator = ({
             });
         }
 
+        stopRequest = (key) => {
+            const oldRequest = this.requests[key];
+            if (oldRequest && oldRequest.running) {
+                oldRequest.stop();
+            }
+        }
+
         startRequest = (requestData, ignoreIfExists) => {
             const {
                 method,
@@ -193,6 +200,7 @@ export const createRequestCoordinator = ({
         render() {
             const contextApi = {
                 startRequest: this.startRequest,
+                stopRequest: this.stopRequest,
                 state: { ...this.state },
             };
 
