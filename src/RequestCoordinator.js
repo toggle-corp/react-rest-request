@@ -55,6 +55,7 @@ export const createRequestCoordinator = ({
                 url,
                 query,
                 body,
+                options,
             } = requestData;
 
             const oldRequest = this.requests[key];
@@ -89,6 +90,7 @@ export const createRequestCoordinator = ({
                 onSuccess: this.handleSuccess,
                 onFailure: this.handleFailure,
                 onFatal: this.handleFatal,
+                ...options,
             });
 
             this.requests[key] = {

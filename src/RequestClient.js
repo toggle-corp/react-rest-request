@@ -81,15 +81,24 @@ export const createRequestClient = () => (requests = {}, consume) => {
                 return this.newProps[key];
             }
 
+            setDefaultRequestParams = (params) => {
+                this.defaultParams = params;
+            }
+
             stopRequest = (key) => {
                 this.api.stopRequest(key);
             }
 
             startRequest = (key, params, ignoreIfExists) => {
-                const { props } = this;
+                const { props, defaultParams } = this;
                 const request = requests[key];
-                const r = arg => resolve(arg, { props, params });
-                const rMethod = method => method && (args => method({ props, params, ...args }));
+                const r = arg => resolve(arg, { props, params, defaultParams });
+                const rMethod = method => method && (args => method({
+                    props,
+                    defaultParams,
+                    params,
+                    ...args,
+                }));
 
                 this.api.startRequest({
                     key: coordinatorKeys[key],
@@ -98,6 +107,7 @@ export const createRequestClient = () => (requests = {}, consume) => {
                     url: r(request.url),
                     query: r(request.query),
                     body: r(request.body),
+                    options: r(request.options),
                     onSuccess: rMethod(request.onSuccess),
                     onFailure: rMethod(request.onFailure),
                     onFatal: rMethod(request.onFatal),
@@ -110,6 +120,7 @@ export const createRequestClient = () => (requests = {}, consume) => {
                     ...acc,
                     [key]: this.getPropFor(key),
                 }), {}),
+                setDefaultRequestParams: this.setDefaultRequestParams,
 
                 ...this.beforeMountOverrides,
                 ...this.props,

@@ -182,6 +182,13 @@ export default class RestRequest {
             return;
         }
 
+        const is5xxError = Math.floor(response.status / 100) === 5;
+        if (!is5xxError) {
+            this.handleFailure(responseBody, response.status);
+            return;
+        }
+
+        // Only retry on 5xx errors
         const retrySuccessful = this.shouldRetry && this.retry();
         if (!retrySuccessful) {
             this.handleFailure(responseBody, response.status);
