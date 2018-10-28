@@ -60,7 +60,7 @@ export const createRequestClient = () => (requests = {}, consume) => (WrappedCom
                     checkCondition = true;
                     args = {
                         prevProps,
-                        props: this.props,
+                        props: this.calculateProps(),
                         params: this.defaultParams,
                     };
                 }
@@ -108,15 +108,15 @@ export const createRequestClient = () => (requests = {}, consume) => (WrappedCom
         }
 
         startRequest = (key, params, ignoreIfExists) => {
-            const { props, defaultParams } = this;
             const request = requests[key];
+            const props = this.calculateProps();
             const r = arg => resolve(arg, {
                 props,
-                params: params || defaultParams,
+                params: params || this.defaultParams,
             });
             const rMethod = method => method && (args => method({
                 props,
-                params: params || defaultParams,
+                params: params || this.defaultParams,
                 ...args,
             }));
 
