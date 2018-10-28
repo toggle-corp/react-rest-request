@@ -49,31 +49,32 @@ export const createRequestClient = () => (requests = {}, consume) => (WrappedCom
             requestsOnProps.forEach((key) => {
                 const propConditions = requests[key].onPropsChanged;
                 let propNames;
+                let checkCondition;
+                let args;
+
                 if (Array.isArray(propConditions)) {
                     propNames = propConditions;
+                    checkCondition = false;
                 } else {
-                    propNames = [];
-                    Object.keys(propConditions).forEach((propName) => {
-                        const condition = propConditions[propName];
-                        const result = resolve(condition, {
-                            prevProps,
-                            props: this.props,
-                            params: this.defaultParams,
-                        });
-
-                        if (result) {
-                            propNames.push(propName);
-                        }
-                    });
+                    propNames = Object.keys(propConditions);
+                    checkCondition = true;
+                    args = {
+                        prevProps,
+                        props: this.props,
+                        params: this.defaultParams,
+                    };
                 }
 
-                // For each prop on which the request depends,
-                // if there is one that has been updated,
-                // make the request (again).
-                const isPropModifed = propNames.some(
-                    propName => this.props[propName] !== prevProps[propName],
-                );
-                if (isPropModifed) {
+                const makeRequest = propNames.some((propName) => {
+                    const isModified = this.props[propName] !== prevProps[propName];
+                    if (!checkCondition) {
+                        return isModified;
+                    }
+
+                    return resolve(propConditions[propName], args);
+                });
+
+                if (makeRequest) {
                     this.startRequest(key);
                 }
             });

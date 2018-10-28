@@ -200,6 +200,10 @@ export default class RestRequest {
             return;
         }
 
+        if (this.urlValue) {
+            console.log(`Stopping ${this.urlValue}`);
+        }
+
         clearTimeout(this.pollId);
         clearTimeout(this.retryId);
 
