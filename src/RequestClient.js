@@ -47,7 +47,25 @@ export const createRequestClient = () => (requests = {}, consume) => (WrappedCom
         componentDidUpdate(prevProps) {
             // For each request that depends on props:
             requestsOnProps.forEach((key) => {
-                const propNames = requests[key].onPropsChanged;
+                const propConditions = requests[key].onPropsChanged;
+                let propNames;
+                if (Array.isArray(propConditions)) {
+                    propNames = propConditions;
+                } else {
+                    propNames = [];
+                    Object.keys(propConditions).forEach((propName) => {
+                        const condition = propConditions[propName];
+                        const result = resolve(condition, {
+                            prevProps,
+                            props: this.props,
+                            params: this.defaultParams,
+                        });
+
+                        if (result) {
+                            propNames.push(propName);
+                        }
+                    });
+                }
 
                 // For each prop on which the request depends,
                 // if there is one that has been updated,
@@ -91,7 +109,10 @@ export const createRequestClient = () => (requests = {}, consume) => (WrappedCom
         startRequest = (key, params, ignoreIfExists) => {
             const { props, defaultParams } = this;
             const request = requests[key];
-            const r = arg => resolve(arg, { props, params });
+            const r = arg => resolve(arg, {
+                props,
+                params: params || defaultParams,
+            });
             const rMethod = method => method && (args => method({
                 props,
                 params: params || defaultParams,

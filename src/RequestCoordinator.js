@@ -168,6 +168,7 @@ export const createRequestCoordinator = ({
             const requestState = this.state[key] || emptyObject;
             const newState = { ...requestState };
             newState.response = response;
+            newState.responseError = undefined;
             newState.responseStatus = status;
             this.setState({ [key]: newState });
         }
@@ -182,6 +183,7 @@ export const createRequestCoordinator = ({
 
             const requestState = this.state[key] || emptyObject;
             const newState = { ...requestState };
+            newState.response = undefined;
             newState.responseError = error;
             newState.responseStatus = status;
             this.setState({ [key]: newState });
@@ -195,7 +197,9 @@ export const createRequestCoordinator = ({
 
             const requestState = this.state[key] || emptyObject;
             const newState = { ...requestState };
+            newState.response = undefined;
             newState.responseError = error;
+            newState.responseStatus = undefined;
             this.setState({ [key]: newState });
         }
 
