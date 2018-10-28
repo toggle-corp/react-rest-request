@@ -39,9 +39,16 @@ export const createRequestClient = () => (requests = {}, consume) => (WrappedCom
 
         componentDidMount() {
             this.beforeMountOverrides = {};
-            requestsOnMount.forEach(
-                key => this.startRequest(key, undefined, requests[key].isUnique),
-            );
+
+            const args = {
+                props: this.calculateProps(),
+                params: this.defaultParams,
+            };
+            requestsOnMount.forEach((key) => {
+                if (resolve(requests[key].onMount, args)) {
+                    this.startRequest(key, undefined, requests[key].isUnique);
+                }
+            });
         }
 
         componentDidUpdate(prevProps) {
