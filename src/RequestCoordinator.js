@@ -41,10 +41,12 @@ export const createRequestCoordinator = ({
         }
 
         stopRequest = (key) => {
-            const oldRequest = this.requests[key];
-            if (oldRequest && oldRequest.running) {
-                oldRequest.stop();
-            }
+            this.setState({ [key]: {} }, () => {
+                const oldRequest = this.requests[key];
+                if (oldRequest) {
+                    oldRequest.stop();
+                }
+            });
         }
 
         startRequest = (requestData, ignoreIfExists) => {
