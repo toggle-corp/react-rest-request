@@ -44,71 +44,186 @@ export const requestMethods = RestRequest.methods;
 
 ## Usage
 
-Use the `RequestCoordinator` HOC on a view level component. It will then bind all requests to the lifecycle of this component. For example, it will automatically destroy all requests (and their callbacks) when the component is unmounted. It can also act as a way of sharing requests between multiple components.
+### Coordinator
+
+Use the coordinator at some top level component so that you can create and use multiple request clients in any of its descendents.
 
 ```js
 import { RequestCoordinator } from '#request';
 
 @RequestCoordinator
-class UserEditPage extends React.PureComponent { ... }
+class UserPage extends React.PureComponent {
+    // ...
+}
 ```
 
-Use the `RequestClient` HOC on all components that need to make requests. For `RequestClient` to work, there must be a `RequestCoordinator` either on the same component or one of the parent components. To define the requests themselves, pass an object describing the requests. Each request is then available through the component's props.
+### Client
+
+The client is used to make actual requests and access the response using props.
 
 ```js
 import { RequestClient, requestMethods } from '#request';
 
-const requestProps = {
-    userGetRequest: {
-        // onMount: the request is called when the
-        // component is mounted.
-        onMount: true,
-
-        // onPropsChanged: the request is recalled when
-        // one of the props changes.
-        onPropsChanged: ['userId'],
-
-        // Each of these properties can be a function or a value.
-        // The function takes ({ props, params }) as its arguments.
-        // Where params is some custom paramters passed when making the request.
-        method: requestMethods.GET,
-        url: ({ props }) => `/api/users/${props.userId}/`,
-    },
-
-    userSaveRequest: {
-        method: requestMethods.POST,
-        url: ({ props }) => `/api/users/${props.userId}/`,
-        body: ({ props, params }) => params.user,
+const requests = {
+    saveUserDetails: {
+        method: requestMethods.PUT,
+        url: ({ props }) => `/users/${props.userId}/`,
+        body: ({ params: { userData } }) => userData,
     },
 };
 
-
-@RequestClient(requestProps)
+@RequestClient(requests)
 class UserForm extends React.PureComponent {
-    /* ... */
+    // ...
 
     handleSave = () => {
-        const { formData } = this.state;
-
-        // Actual method to do the request is available through:
-        // `{requestProp}.do`
-        this.props.userSaveRequest.do({ user: formData });
+        this.props.saveUserDetails.do({
+            userData: this.state.formData,
+        });
     }
 
     render() {
-        const { userGetRequest } = this.props;
+        const { saveUserDetails } = this.props;
+
         const {
-            // Use the following values as required
-            pending,
-            response,
-            responseStatus,
-            responseError,
-        } = userGetRequest;
-        /* ... */
+            pending,        // request is being made, useful to show loading animation
+            response,       // response returned after the request was successful
+            responseStatus, // status of response
+            responseError,  // error when request fails
+        } = saveUserDetails;
+
+        // ...
     }
 }
 ```
 
-### Sharing requests
+#### Requests settings
 
-TODO
+When using the `RequestClient` HOC, a `requests` object needs to be provided which contains details for each request using key, value settings.
+
+Following is the syntax for this `requests` object.
+
+```js
+const requests = {
+    [request_name]: {
+        [key]: [value],
+        // ...
+    },
+};
+```
+
+Here the `request_name` is a unique prop that the component will receive for handling the request and its response. For each such request, it is required to provide a number of key-value pair to define request settings such as its url, request method, body etc.
+
+Each of these settings can either a have fixed value, for example:
+
+```js
+    url: '/api/users/',
+```
+
+Or, it can be a function of signature: `({ props, params }) => {}` which can return a dynamic value, for example:
+
+```js
+    url: ({ props }) => `/api/users/${props.userId}`,
+```
+
+Here `props` is the component's props and `params` is something that the user can provide when making the request.
+
+Each request is now made available to the component using `request_name` prop. The `do` method of this request prop can be used to make the actual request. The `do` method can optionally take a `params` that can be accessed from the request settings above.
+
+```js
+    this.props.[request_name].do(params);
+```
+
+The same prop also contains other info such as the pending status, the response body and any error encountered when making the request, as shown in the example in previous section.
+
+#### Callbacks
+
+`onSuccess`, `onFailure` and `onFatal` are some callbacks that can be provided as the request settings.
+
+```js
+const requests = {
+    userSaveRequest: {
+        // ...
+        onSuccess: ({ props, response }) => {
+            props.setUserReduxAction(response);
+        },
+    },
+};
+```
+
+#### Auto requests
+
+Request can be triggered automatically when the component mounts:
+
+```js
+const requests = {
+    userDetailsRequest: {
+        // onMount can be a true/false value
+        onMount: true,
+
+        // or a function that returns true/false value based on some props
+        onMount: ({ props }) => !props.userData,
+
+        // ...
+    },
+};
+```
+
+Similarly a request can be retriggered everytime some prop changes:
+
+```js
+const requests = {
+    userDetailsRequest: {
+        // onPropsChanged can be a list of props. The request is
+        // retriggered when any of these props change.
+        onPropsChanged: ['userId', 'projectId'],
+
+        // Or it can be a object where the keys are prop names
+        // and values are either true/false value or function
+        // that evaluates to true/false.
+        // The request is retriggered when any of these props
+        // change and each corresponding function evaluates to true.
+        onPropsChanged: {
+            userId: ({ props, prevProps }) => {
+                // I seriously cannot think of an example where
+                // the user needs both props and prevProps but
+                // this function should return either true or false.
+            },
+            projectId: true,
+        },
+    },
+}
+```
+
+Because, user cannot provide params when these requests are auto triggered,
+a method `setDefaultParams` is provided. User can then set default params to use
+when actual params is not provided when making the request.
+
+```js
+const requests = {
+    userDetailsRequest: {
+        // ...
+        onMount: true,
+        onSuccess: ({ response, params: { setUserProject } }) => {
+            setUserProject(response.project);
+        },
+    },
+};
+
+@RequestClient(requests)
+const TestComponent extends React.PureComponent {
+    constructor(props) {
+        super(props);
+
+        // ...
+
+        props.userDetailsRequest.setDefaultParams({
+            setUserProject: (project) => {
+                this.setState({ project });
+            },
+        });
+    }
+
+    // ...
+}
+```
