@@ -30,21 +30,26 @@ export const createRequestClient = () => (requests = {}, consume) => (WrappedCom
                     ...acc,
                     [key]: {
                         pending: true,
+                        setDefaultParams: params => this.setDefaultParamsPerRequest(key, params),
                     },
                 }), {});
 
             this.lastProps = {};
             this.newProps = {};
+
+            this.defaultParams = undefined;
+            this.defaultParamsPerRequest = {};
         }
 
         componentDidMount() {
             this.beforeMountOverrides = {};
 
-            const args = {
-                props: this.calculateProps(),
-                params: this.defaultParams,
-            };
+            const props = this.calculateProps();
             requestsOnMount.forEach((key) => {
+                const args = {
+                    props,
+                    params: this.defaultParamsPerRequest[key] || this.defaultParams,
+                };
                 if (resolve(requests[key].onMount, args)) {
                     this.startRequest(key, undefined, requests[key].isUnique);
                 }
@@ -52,6 +57,8 @@ export const createRequestClient = () => (requests = {}, consume) => (WrappedCom
         }
 
         componentDidUpdate(prevProps) {
+            const props = this.calculateProps();
+
             // For each request that depends on props:
             requestsOnProps.forEach((key) => {
                 const propConditions = requests[key].onPropsChanged;
@@ -67,18 +74,17 @@ export const createRequestClient = () => (requests = {}, consume) => (WrappedCom
                     checkCondition = true;
                     args = {
                         prevProps,
-                        props: this.calculateProps(),
-                        params: this.defaultParams,
+                        props,
+                        params: this.defaultParamsPerRequest[key] || this.defaultParams,
                     };
                 }
 
                 const makeRequest = propNames.some((propName) => {
                     const isModified = this.props[propName] !== prevProps[propName];
-                    if (!checkCondition) {
-                        return isModified;
-                    }
-
-                    return resolve(propConditions[propName], args);
+                    return isModified && (!checkCondition || resolve(
+                        propConditions[propName],
+                        args,
+                    ));
                 });
 
                 if (makeRequest) {
@@ -100,10 +106,15 @@ export const createRequestClient = () => (requests = {}, consume) => (WrappedCom
 
             this.newProps[key] = {
                 ...prop,
+                setDefaultParams: params => this.setDefaultParamsPerRequest(key, params),
                 do: params => this.startRequest(key, params),
                 abort: () => this.stopRequest(key),
             };
             return this.newProps[key];
+        }
+
+        setDefaultParamsPerRequest = (key, params) => {
+            this.defaultParamsPerRequest[key] = params;
         }
 
         setDefaultRequestParams = (params) => {
@@ -119,11 +130,11 @@ export const createRequestClient = () => (requests = {}, consume) => (WrappedCom
             const props = this.calculateProps();
             const r = arg => resolve(arg, {
                 props,
-                params: params || this.defaultParams,
+                params: params || this.defaultParamsPerRequest[key] || this.defaultParams,
             });
             const rMethod = method => method && (args => method({
                 props,
-                params: params || this.defaultParams,
+                params: params || this.defaultParamsPerRequest[key] || this.defaultParams,
                 ...args,
             }));
 
