@@ -115,6 +115,8 @@ export const createRequestCoordinator = ({
             }
 
             if (this.mounted) {
+                // Force preload to set proper state before request actually start
+                this.handlePreLoad(key);
                 this.requests[key].start();
             }
         }
