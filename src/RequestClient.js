@@ -52,6 +52,11 @@ export const createRequestClient = () => (requests = {}, consume) => (WrappedCom
                 };
                 if (resolve(requests[key].onMount, args)) {
                     this.startRequest(key, undefined, requests[key].isUnique);
+                } else {
+                    // Not that any request is running but calling stop makes
+                    // sure that request coordinator state is reset for key
+                    // and that this client will be rerendered.
+                    this.stopRequest(key);
                 }
             });
         }
