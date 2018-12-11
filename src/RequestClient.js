@@ -51,6 +51,7 @@ export const createRequestClient = () => (requests = {}, consume) => (WrappedCom
                     params: this.defaultParamsPerRequest[key] || this.defaultParams,
                 };
                 if (resolve(requests[key].onMount, args)) {
+                    // FIXME: why is the params undefined here?
                     this.startRequest(key, undefined, requests[key].isUnique);
                 } else {
                     // Not that any request is running but calling stop makes
@@ -143,19 +144,32 @@ export const createRequestClient = () => (requests = {}, consume) => (WrappedCom
                 ...args,
             }));
 
-            this.api.startRequest({
-                key: this.coordinatorKeys[key],
-                group: r(request.group),
-                method: r(request.method),
-                url: r(request.url),
-                query: r(request.query),
-                body: r(request.body),
-                options: r(request.options),
+            const {
+                group,
+                method,
+                url,
+                query,
+                body,
+                options,
+                onSuccess,
+                onFailure,
+                onFatal,
+                ...otherProps
+            } = request;
 
+            this.api.startRequest({
+                ...otherProps,
+                key: this.coordinatorKeys[key],
+                group: r(group),
+                method: r(method),
+                url: r(url),
+                query: r(query),
+                body: r(body),
+                options: r(options),
                 // FIXME: remove callbacks once unmounted
-                onSuccess: rMethod(request.onSuccess),
-                onFailure: rMethod(request.onFailure),
-                onFatal: rMethod(request.onFatal),
+                onSuccess: rMethod(onSuccess),
+                onFailure: rMethod(onFailure),
+                onFatal: rMethod(onFatal),
             }, ignoreIfExists);
         }
 

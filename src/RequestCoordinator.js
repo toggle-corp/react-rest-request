@@ -162,34 +162,55 @@ export const createRequestCoordinator = ({
         }
 
         handleSuccess = (key, body, status) => {
-            const { onSuccess } = this.requests[key].data;
-            const response = transformResponse(body);
+            const { data } = this.requests[key];
+            const { onSuccess } = data;
+
+            let response;
+            try {
+                response = transformResponse(body, data);
+            } catch (e) {
+                this.handleFatal(key, e);
+                return;
+            }
 
             if (onSuccess) {
                 onSuccess({ response, status });
             }
 
             const requestState = this.state[key] || emptyObject;
-            const newState = { ...requestState };
-            newState.response = response;
-            newState.responseError = undefined;
-            newState.responseStatus = status;
+            const newState = {
+                ...requestState,
+                response,
+                responseError: undefined,
+                responseStatus: status,
+            };
             this.setState({ [key]: newState });
         }
 
         handleFailure = (key, body, status) => {
-            const { onFailure } = this.requests[key].data;
-            const error = transformErrors(body);
+            const { data } = this.requests[key];
+            const { onFailure } = data;
+
+            let error;
+            try {
+                error = transformErrors(body, data);
+            } catch (e) {
+                this.handleFatal(key, e);
+                console.error(e);
+                return;
+            }
 
             if (onFailure) {
                 onFailure({ error, status });
             }
 
             const requestState = this.state[key] || emptyObject;
-            const newState = { ...requestState };
-            newState.response = undefined;
-            newState.responseError = error;
-            newState.responseStatus = status;
+            const newState = {
+                ...requestState,
+                response: undefined,
+                responseError: error,
+                responseStatus: status,
+            };
             this.setState({ [key]: newState });
         }
 
@@ -200,10 +221,12 @@ export const createRequestCoordinator = ({
             }
 
             const requestState = this.state[key] || emptyObject;
-            const newState = { ...requestState };
-            newState.response = undefined;
-            newState.responseError = error;
-            newState.responseStatus = undefined;
+            const newState = {
+                ...requestState,
+                response: undefined,
+                responseError: error,
+                responseStatus: undefined,
+            };
             this.setState({ [key]: newState });
         }
 
