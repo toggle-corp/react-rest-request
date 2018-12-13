@@ -217,11 +217,13 @@ export default class RestRequest {
     retry = () => {
         if (this.maxRetryAttempts >= 0 && this.retryCount > this.maxRetryAttempts) {
             console.warn(`Max no. of retries exceeded ${this.urlValue}`, this.parameters);
-            return;
+            return false;
         }
 
         this.retryId = setTimeout(this.internalStart, this.retryTime);
         this.retryCount += 1;
+
+        return true;
     }
 
     poll = () => {

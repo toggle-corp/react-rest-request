@@ -51,7 +51,7 @@ export const createRequestCoordinator = ({
 
         startRequest = (requestData, ignoreIfExists) => {
             const {
-                method,
+                method = RestRequest.methods.GET,
                 key,
                 group,
                 url,
