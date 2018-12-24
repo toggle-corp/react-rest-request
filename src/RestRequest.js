@@ -1,8 +1,10 @@
 import { isTruthy, noOp, resolve } from './utils';
 
-const createWarningFn = text => (response) => {
-    console.warn(text);
-    if (response) {
+const createWarningFn = (text, logInfo, logWarning) => (response) => {
+    if (logWarning) {
+        console.warn(text);
+    }
+    if (response && logInfo) {
         console.log(response);
     }
 };
@@ -72,16 +74,18 @@ export default class RestRequest {
         shouldPoll,
 
         delay = 50,
+        logWarning = true,
+        logInfo = true,
     }) {
         this.key = key;
         this.url = url;
         this.params = params;
         this.delay = delay;
 
-        this.success = onSuccess || createWarningFn('No success callback defined');
-        this.failure = onFailure || createWarningFn('No failure callback defined');
-        this.fatal = onFatal || createWarningFn('No fatal callback defined');
-        this.abort = onAbort || createWarningFn('No abort callback defined');
+        this.success = onSuccess || createWarningFn('No success callback defined', logInfo, logWarning);
+        this.failure = onFailure || createWarningFn('No failure callback defined', logInfo, logWarning);
+        this.fatal = onFatal || createWarningFn('No fatal callback defined', logInfo, logWarning);
+        this.abort = onAbort || createWarningFn('No abort callback defined', logInfo, logWarning);
 
         this.preLoad = onPreLoad || noOp;
         this.postLoad = onPostLoad || noOp;
@@ -89,6 +93,9 @@ export default class RestRequest {
 
         this.aborted = false;
         this.requestCompleted = false;
+
+        this.logWarning = logWarning;
+        this.logInfo = logInfo;
 
         // Polling:
 
@@ -124,7 +131,9 @@ export default class RestRequest {
 
         this.preLoad(this.key);
 
-        console.log(`Fetching ${this.urlValue}`, this.parameters);
+        if (this.logInfo) {
+            console.log(`Fetching ${this.urlValue}`, this.parameters);
+        }
         let response;
         try {
             response = await fetch(this.urlValue, this.parameters);
@@ -172,7 +181,9 @@ export default class RestRequest {
             });
         }
 
-        console.log(`Recieving ${this.urlValue}`, responseBody);
+        if (this.logInfo) {
+            console.log(`Recieving ${this.urlValue}`, responseBody);
+        }
         if (response.ok) {
             if (this.shouldPoll && this.shouldPoll(responseBody, response.status)) {
                 this.poll();
@@ -200,7 +211,7 @@ export default class RestRequest {
             return;
         }
 
-        if (this.urlValue) {
+        if (this.urlValue && this.logInfo) {
             console.log(`Stopping ${this.urlValue}`);
         }
 
@@ -216,7 +227,9 @@ export default class RestRequest {
 
     retry = () => {
         if (this.maxRetryAttempts >= 0 && this.retryCount > this.maxRetryAttempts) {
-            console.warn(`Max no. of retries exceeded ${this.urlValue}`, this.parameters);
+            if (this.logWarning) {
+                console.warn(`Max no. of retries exceeded ${this.urlValue}`, this.parameters);
+            }
             return false;
         }
 
@@ -228,7 +241,9 @@ export default class RestRequest {
 
     poll = () => {
         if (this.pollCount > this.maxPollAttempts) {
-            console.warn(`Max no. of polls exceeded ${this.urlValue}`, this.parameters);
+            if (this.logWarning) {
+                console.warn(`Max no. of polls exceeded ${this.urlValue}`, this.parameters);
+            }
             return;
         }
 
