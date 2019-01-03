@@ -1,7 +1,7 @@
 import React from 'react';
 import hoistNonReactStatics from 'hoist-non-react-statics';
 
-import { randomString, resolve } from './utils';
+import { randomString, resolve, mapToMap } from './utils';
 import RequestContext from './RequestContext';
 
 const emptyObject = {};
@@ -134,10 +134,12 @@ export const createRequestClient = () => (requests = {}, consume) => (WrappedCom
         startRequest = (key, params, ignoreIfExists) => {
             const request = requests[key];
             const props = this.calculateProps();
+
             const r = arg => resolve(arg, {
                 props,
                 params: params || this.defaultParamsPerRequest[key] || this.defaultParams,
             });
+
             const rMethod = method => method && (args => method({
                 props,
                 params: params || this.defaultParamsPerRequest[key] || this.defaultParams,
@@ -145,27 +147,33 @@ export const createRequestClient = () => (requests = {}, consume) => (WrappedCom
             }));
 
             const {
+                /*
                 group,
                 method,
                 url,
                 query,
                 body,
                 options,
+                */
                 onSuccess,
                 onFailure,
                 onFatal,
                 ...otherProps
             } = request;
 
+            const resolvedProps = mapToMap(otherProps, k => k, e => r(e));
+
             this.api.startRequest({
-                ...otherProps,
+                ...resolvedProps,
                 key: this.coordinatorKeys[key],
+                /*
                 group: r(group),
                 method: r(method),
                 url: r(url),
                 query: r(query),
                 body: r(body),
                 options: r(options),
+                */
                 // FIXME: remove callbacks once unmounted
                 onSuccess: rMethod(onSuccess),
                 onFailure: rMethod(onFailure),

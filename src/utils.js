@@ -17,6 +17,20 @@ export const mapToList = (obj = {}, modifier) => (
     )
 );
 
+export const mapToMap = (obj = {}, keySelector, modifier) => (
+    Object.keys(obj).reduce(
+        (acc, k) => {
+            const elem = obj[k];
+            const key = keySelector ? keySelector(k, elem) : k;
+            if (isTruthy(key)) {
+                acc[key] = modifier ? modifier(elem, key) : elem;
+            }
+            return acc;
+        },
+        {},
+    )
+);
+
 export const noOp = () => {};
 export const identity = x => x;
 
