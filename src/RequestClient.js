@@ -158,6 +158,7 @@ export const createRequestClient = () => (requests = {}, consume) => (WrappedCom
                 onSuccess,
                 onFailure,
                 onFatal,
+                shouldPoll,
                 ...otherProps
             } = request;
 
@@ -174,6 +175,7 @@ export const createRequestClient = () => (requests = {}, consume) => (WrappedCom
                 body: r(body),
                 options: r(options),
                 */
+                shouldPoll,
                 // FIXME: remove callbacks once unmounted
                 onSuccess: rMethod(onSuccess),
                 onFailure: rMethod(onFailure),

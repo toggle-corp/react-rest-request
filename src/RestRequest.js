@@ -23,6 +23,23 @@ export default class RestRequest {
         'Content-Type': 'application/json; charset=utf-8',
     };
 
+    static getFormData = (jsonData) => {
+        const formData = new FormData();
+        Object.keys(jsonData).forEach(
+            (key) => {
+                const value = jsonData[key];
+                if (value.prop && value.prop.constructor === Array) {
+                    value.map(
+                        v => formData.append(key, v),
+                    );
+                } else {
+                    formData.append(key, value);
+                }
+            },
+        );
+        return formData;
+    }
+
     /*
      * Parse url params and return an key-value pair
      * Input: stringParams (this.props.location.search.replace('?', ''))

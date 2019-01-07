@@ -52,6 +52,7 @@ export const createRequestCoordinator = ({
         startRequest = (requestData, ignoreIfExists) => {
             const {
                 method = RestRequest.methods.GET,
+                hasFile = false,
                 key,
                 group,
                 url,
@@ -60,6 +61,7 @@ export const createRequestCoordinator = ({
                 options,
                 logInfo,
                 logWarning,
+                shouldPoll,
             } = requestData;
 
             const oldRequest = this.requests[key];
@@ -74,10 +76,14 @@ export const createRequestCoordinator = ({
             const calculateParams = () => {
                 const params = {
                     method,
-                    headers: RestRequest.jsonHeaders,
                 };
                 if (body) {
-                    params.body = JSON.stringify(body);
+                    if (hasFile) {
+                        params.body = RestRequest.getFormData(body);
+                    } else {
+                        params.headers = RestRequest.jsonHeaders;
+                        params.body = JSON.stringify(body);
+                    }
                 }
                 return transformParams(params, this.props);
             };
@@ -96,6 +102,7 @@ export const createRequestCoordinator = ({
                 onFatal: this.handleFatal,
                 logInfo,
                 logWarning,
+                shouldPoll,
                 ...options,
             });
 
