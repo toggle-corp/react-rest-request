@@ -4,8 +4,8 @@
     "description": "Rest request library for react app",
     "main": "build/index.js",
     "scripts": {
-        "build": "webpack --config config/webpack.js --mode=development",
-        "prepare": "webpack --config config/webpack.js --mode=production"
+        "build": "webpack --config webpack.dev.config.js --mode=development",
+        "prepare": "webpack --config webpack.prod.config.js --mode=production"
     },
     "repository": {
         "type": "git",
@@ -17,33 +17,26 @@
         "url": "https://github.com/toggle-corp/react-rest-request/issues"
     },
     "homepage": "https://github.com/toggle-corp/react-rest-request#readme",
-    "devDependencies": {
-        "@babel/core": "^7.1.0",
-        "@babel/plugin-proposal-class-properties": "^7.1.0",
-        "@babel/plugin-proposal-object-rest-spread": "^7.0.0",
-        "@babel/preset-env": "^7.1.0",
-        "@babel/preset-react": "^7.0.0",
-        "babel-eslint": "^10.0.1",
-        "babel-loader": "^8.0.2",
-        "eslint": "^5.6.0",
-        "eslint-config-airbnb": "^17.1.0",
-        "eslint-plugin-import": "^2.14.0",
-        "eslint-plugin-jsx-a11y": "^6.1.1",
-        "eslint-plugin-react": "^7.11.1",
-        "react": "^16.5.2",
-        "react-dom": "^16.5.2",
-        "webpack": "^4.27.1",
-        "webpack-cli": "^3.1.2"
-    },
     "dependencies": {
-        "@babel/plugin-transform-runtime": "^7.1.0",
-        "@babel/polyfill": "^7.0.0",
-        "@babel/runtime": "^7.1.2",
-        "hoist-non-react-statics": "^3.0.1",
-        "prop-types": "^15.6.2"
+        "hoist-non-react-statics": "^3.2.1",
+        "prop-types": "^15.6.2",
+        "react": "^16.7.0",
+        "react-dom": "^16.7.0"
     },
-    "peerDependencies": {
-        "react": "^16.3.2",
-        "react-dom": "^16.3.2"
+    "devDependencies": {
+        "@types/hoist-non-react-statics": "^3.0.1",
+        "@types/jest": "^23.3.12",
+        "@types/node": "^10.12.18",
+        "@types/react": "^16.7.18",
+        "@types/react-dom": "^16.0.11",
+        "awesome-typescript-loader": "^5.2.1",
+        "circular-dependency-plugin": "^5.0.2",
+        "jest": "^23.6.0",
+        "ts-jest": "^23.10.5",
+        "ts-node": "^7.0.1",
+        "tslint-eslint-rules": "^5.4.0",
+        "typescript": "^3.2.2",
+        "webpack": "^4.28.3",
+        "webpack-cli": "^3.2.1"
     }
 }

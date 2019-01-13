@@ -1,27 +1,56 @@
 import React from 'react';
 import hoistNonReactStatics from 'hoist-non-react-statics';
 
-import { identity } from './utils';
-import RestRequest from './RestRequest';
-import RequestContext from './RequestContext';
+import { CoordinatorAttributes, Context } from './declarations';
+import { RequestContext } from './RequestContext';
+import {
+    RestRequest,
+    methods,
+    jsonHeaders,
+    prepareUrlParams,
+    HandlerFunc,
+} from './RestRequest';
 
 const emptyObject = {};
 
-export const createRequestCoordinator = ({
-    transformParams = identity,
-    transformResponse = identity,
-    transformErrors = identity,
-    transformProps = identity,
-    transformUrl = identity,
-} = {}) => (WrappedComponent) => {
-    class View extends React.PureComponent {
-        constructor(props) {
-            super(props);
+interface Request {
+    running: boolean,
+    data: CoordinatorAttributes,
+    stop(): void,
+    start(): void,
+}
 
-            this.mounted = false;
-            this.requests = {};
+interface MyParams {
+    method: string,
+    headers: { [key: string]: string },
+    body?: string,
+}
+
+interface Attributes<Props, NewProps>{
+    transformUrl?(url: string, props: Props): string,
+    transformProps(props: Props): NewProps,
+    transformParams?(params: MyParams, props: Props): object,
+    transformResponse?(body: object, data: CoordinatorAttributes): object,
+    transformErrors?(body: object, data: CoordinatorAttributes): object,
+}
+
+export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes<Props, NewProps>) => (WrappedComponent: React.ComponentType<NewProps>) => {
+    const {
+        transformParams,
+        transformResponse,
+        transformErrors,
+        transformProps,
+        transformUrl,
+    } = attributes;
+
+    class Coordinator extends React.Component<Props, Context['state']> {
+        private mounted: boolean = false;
+        private requests: { [key:string]: Request } = {};
+        private requestGroups: { [key: string]: string[] }= {};
+
+        constructor(props: Props) {
+            super(props);
             this.state = {};
-            this.requestGroups = {};
         }
 
         componentDidMount() {
@@ -34,32 +63,30 @@ export const createRequestCoordinator = ({
             this.mounted = false;
         }
 
-        forEachRequest = (callback) => {
+        private forEachRequest = (callback: (data: Request ) => void) => {
             Object.keys(this.requests).forEach((key) => {
                 callback(this.requests[key]);
             });
         }
 
-        stopRequest = (key) => {
+        private stopRequest: Context['stopRequest'] = (key) => {
             this.setState({ [key]: {} }, () => {
-                const oldRequest = this.requests[key];
-                if (oldRequest) {
-                    oldRequest.stop();
+                const request = this.requests[key];
+                if (request ) {
+                    request.stop();
                 }
             });
         }
 
-        startRequest = (requestData, ignoreIfExists) => {
+        private startRequest: Context['startRequest'] = (requestData, ignoreIfExists) => {
             const {
-                method = RestRequest.methods.GET,
                 key,
                 group,
+                method = methods.GET,
                 url,
                 query,
                 body,
-                options,
-                logInfo,
-                logWarning,
+                options = {},
             } = requestData;
 
             const oldRequest = this.requests[key];
@@ -74,19 +101,21 @@ export const createRequestCoordinator = ({
             const calculateParams = () => {
                 const params = {
                     method,
-                    headers: RestRequest.jsonHeaders,
+                    headers: jsonHeaders,
+                    body: body ? JSON.stringify(body) : undefined,
                 };
-                if (body) {
-                    params.body = JSON.stringify(body);
-                }
-                return transformParams(params, this.props);
+                return transformParams
+                    ? transformParams(params, this.props)
+                    : params;
             };
 
-            const preparedUrl = !query ? url : `${url}?${RestRequest.prepareUrlParams(query)}`;
+            const appendage = query && prepareUrlParams(query);
+            const preparedUrl = appendage && appendage.length > 0 ? `${url}?${appendage}` : url;
 
             const request = new RestRequest({
+                ...options,
                 key,
-                url: transformUrl(preparedUrl, this.props),
+                url: transformUrl ? transformUrl(preparedUrl, this.props) : preparedUrl,
                 params: calculateParams,
                 onPreLoad: this.handlePreLoad,
                 onAfterLoad: this.handleAfterLoad,
@@ -94,9 +123,6 @@ export const createRequestCoordinator = ({
                 onSuccess: this.handleSuccess,
                 onFailure: this.handleFailure,
                 onFatal: this.handleFatal,
-                logInfo,
-                logWarning,
-                ...options,
             });
 
             this.requests[key] = {
@@ -114,10 +140,12 @@ export const createRequestCoordinator = ({
                 },
             };
 
-            if (!this.requestGroups[group]) {
-                this.requestGroups[group] = [key];
-            } else {
-                this.requestGroups[group].push(key);
+            if (group) {
+                if (!this.requestGroups[group]) {
+                    this.requestGroups[group] = [key];
+                } else {
+                    this.requestGroups[group].push(key);
+                }
             }
 
             if (this.mounted) {
@@ -125,7 +153,7 @@ export const createRequestCoordinator = ({
             }
         }
 
-        handlePreLoad = (key) => {
+        private handlePreLoad = (key: string) => {
             const newState = { pending: true };
 
             // Calculate group state
@@ -139,10 +167,12 @@ export const createRequestCoordinator = ({
             this.setState({ [key]: newState, ...groupState });
         }
 
-        handleRequestDone = (key) => {
+        private handleRequestDone = (key: string) => {
             const requestState = this.state[key] || emptyObject;
-            const newState = { ...requestState };
-            newState.pending = false;
+            const newState = {
+                ...requestState,
+                pending: false,
+            };
 
             // Calculate group state
             const { data: { group } } = this.requests[key];
@@ -150,33 +180,33 @@ export const createRequestCoordinator = ({
                 [group]: {
                     pending: this.requestGroups[group]
                         .filter(k => k !== key)
-                        .some(k => this.state[k].pending),
+                        .some(k => !!this.state[k].pending),
                 },
             } : emptyObject;
 
             this.setState({ [key]: newState, ...groupState });
         }
 
-        handleAfterLoad = (key) => {
+        private handleAfterLoad = (key: string) => {
             this.handleRequestDone(key);
         }
 
-        handleAbort = (key) => {
+        private handleAbort = (key: string) => {
             this.handleRequestDone(key);
         }
 
-        handleSuccess = (key, body, status) => {
+        private handleSuccess: HandlerFunc = (key, body, status) => {
             const { data } = this.requests[key];
-            const { onSuccess } = data;
 
             let response;
             try {
-                response = transformResponse(body, data);
+                response = transformResponse ? transformResponse(body, data) : body;
             } catch (e) {
-                this.handleFatal(key, e);
+                this.handleFatal(key, e, 0);
                 return;
             }
 
+            const { onSuccess } = data;
             if (onSuccess) {
                 onSuccess({ response, status });
             }
@@ -191,19 +221,19 @@ export const createRequestCoordinator = ({
             this.setState({ [key]: newState });
         }
 
-        handleFailure = (key, body, status) => {
+        private handleFailure: HandlerFunc = (key, body, status) => {
             const { data } = this.requests[key];
-            const { onFailure } = data;
 
             let error;
             try {
-                error = transformErrors(body, data);
+                error = transformErrors ? transformErrors(body, data) : body;
             } catch (e) {
-                this.handleFatal(key, e);
+                this.handleFatal(key, e, 0);
                 console.error(e);
                 return;
             }
 
+            const { onFailure } = data;
             if (onFailure) {
                 onFailure({ error, status });
             }
@@ -218,8 +248,9 @@ export const createRequestCoordinator = ({
             this.setState({ [key]: newState });
         }
 
-        handleFatal = (key, error) => {
-            const { onFatal } = this.requests[key].data;
+        private handleFatal: HandlerFunc = (key, error, status) => {
+            const { data } = this.requests[key];
+            const { onFatal } = data;
             if (onFatal) {
                 onFatal({ error });
             }
@@ -229,7 +260,7 @@ export const createRequestCoordinator = ({
                 ...requestState,
                 response: undefined,
                 responseError: error,
-                responseStatus: undefined,
+                responseStatus: status,
             };
             this.setState({ [key]: newState });
         }
@@ -238,21 +269,21 @@ export const createRequestCoordinator = ({
             const contextApi = {
                 startRequest: this.startRequest,
                 stopRequest: this.stopRequest,
-                state: { ...this.state },
+                state: this.state,
             };
+
+            const newProps = transformProps(this.props);
 
             return (
                 <RequestContext.Provider value={contextApi}>
-                    <WrappedComponent {...transformProps(this.props)} />
+                    <WrappedComponent {...newProps} />
                 </RequestContext.Provider>
             );
         }
     }
 
-    return hoistNonReactStatics(
-        View,
+    return hoistNonReactStatics<React.ComponentType<Props>, React.ComponentType<NewProps>>(
+        Coordinator,
         WrappedComponent,
     );
 };
-
-export default createRequestCoordinator();
