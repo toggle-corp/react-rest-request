@@ -16,9 +16,10 @@ const emptyObject = {};
 
 export const createRequestClient = <Props extends object, Params>(
     requests: { [key: string]: ClientAttributes<Props, Params>} = {},
-    consume?: string[]
+    consume?: string[],
 ) => (
-    WrappedComponent: React.ComponentType<NewProps<Props, Params>>
+    // tslint:disable-next-line variable-name
+    WrappedComponent: React.ComponentType<NewProps<Props, Params>>,
 ) => {
     const requestKeys = Object.keys(requests);
     const requestsOnMount = requestKeys.filter(key => requests[key].onMount);
@@ -35,7 +36,7 @@ export const createRequestClient = <Props extends object, Params>(
 
         private lastProps: {
             [key: string]: ExtendedContextState<Params>,
-        }= {};
+        } = {};
 
         private defaultParamsPerRequest: {
             [key: string]: Params,
@@ -48,6 +49,13 @@ export const createRequestClient = <Props extends object, Params>(
 
             this.canonicalKeys = this.generateCanonicalKeys(requestKeys);
             this.beforeMountOverrides = this.generateBeforeMountProps(requestsConsumedOnMount);
+
+            // NOTE: placeholder api
+            this.api = {
+                startRequest: () => console.error('api.startRequest not defined'),
+                stopRequest: () => console.error('api.stopRequest not defined'),
+                state: {},
+            };
         }
 
         componentDidMount() {
@@ -115,7 +123,9 @@ export const createRequestClient = <Props extends object, Params>(
                         ...acc,
                         [key]: {
                             pending: true,
-                            setDefaultParams: (params: Params) => this.setDefaultParamsPerRequest(key, params),
+                            setDefaultParams: (params: Params) => (
+                                this.setDefaultParamsPerRequest(key, params)
+                            ),
                         },
                     }),
                     {},
@@ -152,8 +162,8 @@ export const createRequestClient = <Props extends object, Params>(
         private startRequest = (key: string, params?: Params, ignoreIfExists?: boolean) => {
             const request = requests[key];
             const myArgs = {
+                params,
                 props: this.getProps(this.props),
-                params: params,
             };
 
             const {
@@ -195,9 +205,15 @@ export const createRequestClient = <Props extends object, Params>(
                     options: resolve(options, myArgs),
                     extras: resolve(extras, myArgs),
 
-                    onSuccess: () => onSuccess && ((args: onSuccessArgument) => onSuccess({ ...args, ...myArgs })),
-                    onFailure: () => onFailure && ((args: onFailureArgument) => onFailure({ ...args, ...myArgs })),
-                    onFatal: () => onFatal && ((args: onFatalArgument) => onFatal({ ...args, ...myArgs })),
+                    onSuccess: () => onSuccess && (
+                        (args: onSuccessArgument) => onSuccess({ ...args, ...myArgs })
+                    ),
+                    onFailure: () => onFailure && (
+                        (args: onFailureArgument) => onFailure({ ...args, ...myArgs })
+                    ),
+                    onFatal: () => onFatal && (
+                        (args: onFatalArgument) => onFatal({ ...args, ...myArgs })
+                    ),
 
                     // FIXME: resolve other methods as well
                     ...otherProps,
@@ -247,9 +263,9 @@ export const createRequestClient = <Props extends object, Params>(
                     ...acc,
                     [prop.key]: prop.value,
                 }),
-                {}
+                {},
             );
-        };
+        }
 
         private renderWrappedComponent = (api: Context) => {
             this.api = api;
@@ -265,10 +281,13 @@ export const createRequestClient = <Props extends object, Params>(
         }
 
         getProps = (props: Props) => {
-            return Object.assign({
-                setDefaultRequestParams: this.setDefaultRequestParams,
-                requests: this.calculateRequests(),
-            }, props);
+            return Object.assign(
+                {
+                    setDefaultRequestParams: this.setDefaultRequestParams,
+                    requests: this.calculateRequests(),
+                },
+                props,
+            );
         }
 
         render() {
@@ -280,6 +299,7 @@ export const createRequestClient = <Props extends object, Params>(
         }
     }
 
+    // tslint:disable-next-line max-line-length
     return hoistNonReactStatics<React.ComponentType<Props>, React.ComponentType<NewProps<Props, Params>>>(
         View,
         WrappedComponent,

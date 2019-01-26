@@ -13,43 +13,43 @@ type OptionalKeys<T> = {
 
 // should be able to have other values
 export interface CoordinatorAttributes {
-    key: string,
-    group?: string,
+    key: string;
+    group?: string;
 
-    method: string,
-    url: string,
-    body?: object,
-    query?: { [key: string]: string },
-    options?: object,
-    extras?: object,
+    method: string;
+    url: string;
+    body?: object;
+    query?: { [key: string]: string };
+    options?: object;
+    extras?: object;
 
-    onSuccess?: (value: { response: object, status: number }) => void,
-    onFailure?: (value: { error: object, status: number }) => void,
-    onFatal?: (value: { error: object }) => void,
+    onSuccess?: (value: { response: object, status: number }) => void;
+    onFailure?: (value: { error: object, status: number }) => void;
+    onFatal?: (value: { error: object }) => void;
 }
 
 // COORDINATOR CONTEXT
 
 export interface ContextState {
-    pending?: boolean,
-    response?: object,
-    responseError?: object,
-    responseStatus?: number,
+    pending?: boolean;
+    response?: object;
+    responseError?: object;
+    responseStatus?: number;
 }
 
 export interface Context {
-    startRequest(requestData: CoordinatorAttributes, ignoreIfExists?: boolean): void,
-    stopRequest(key: string): void,
-    state: { [key: string]: ContextState },
+    startRequest(requestData: CoordinatorAttributes, ignoreIfExists?: boolean): void;
+    stopRequest(key: string): void;
+    state: { [key: string]: ContextState };
 }
 
 // CLIENT CONTEXT
 
 export interface ExtensionState<Params> {
-    pending?: boolean,
-    setDefaultParams(params: Params): void,
-    do?(params?: Params): void,
-    abort?(): void,
+    pending?: boolean;
+    setDefaultParams(params: Params): void;
+    do?(params?: Params): void;
+    abort?(): void;
 }
 
 export type ExtendedContextState<Params> = ExtensionState<Params> & ContextState;
@@ -69,20 +69,22 @@ export interface InjectionFunctionWithPrev<Props, Params, T> {
     (args: { props: NewProps<Props, Params>, prevProps: Props, params?: Params }): T;
 }
 export interface InjectionFunctionForFunction<A, R, Props, Params> {
-    (arg : (A & { props: NewProps<Props, Params>, params?: Params })): R
+    (arg : (A & { props: NewProps<Props, Params>, params?: Params })): R;
 }
 type Resolve<P, Props, Params> = P extends (args: infer A) => infer R
     ? InjectionFunctionForFunction<A, R, Props, Params>
-    : (P | InjectionFunction<Props, Params, P>)
+    : (P | InjectionFunction<Props, Params, P>);
 type CoordinatorExtensionOptional<Props, Params> = {
-    [key in Exclude<NonOptionalKeys<CoordinatorAttributes>, 'key'>]: Resolve<CoordinatorAttributes[key], Props, Params>;
+    [key in Exclude<NonOptionalKeys<CoordinatorAttributes>, 'key'>]:
+        Resolve<CoordinatorAttributes[key], Props, Params>;
 };
 
 type ResolveUncertain<P, Props, Params> = P extends (args: infer A) => infer R
     ? InjectionFunctionForFunction<A, R, Props, Params>
-    : (P | InjectionFunction<Props, Params, P | undefined>)
+    : (P | InjectionFunction<Props, Params, P | undefined>);
 type CoordinatorExtensionNonOptional<Props, Params> = {
-    [key in Exclude<OptionalKeys<CoordinatorAttributes>, 'key'>]?: ResolveUncertain<Required<CoordinatorAttributes>[key], Props, Params>;
+    [key in Exclude<OptionalKeys<CoordinatorAttributes>, 'key'>]?:
+        ResolveUncertain<Required<CoordinatorAttributes>[key], Props, Params>;
 };
 type OnlyClient<Props, Params> = {
     isUnique?: boolean;
@@ -90,7 +92,7 @@ type OnlyClient<Props, Params> = {
         [key in keyof Props]: InjectionFunctionWithPrev<Props, Params, boolean>
     };
     onMount?: boolean | InjectionFunction<Props, Params, boolean>;
-}
+};
 export type ClientAttributes<Props, Params> = (
     OnlyClient<Props, Params>
     & CoordinatorExtensionOptional<Props, Params>

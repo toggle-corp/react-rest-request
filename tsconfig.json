@@ -1,31 +1,35 @@
 {
   "compilerOptions": {
-    "allowSyntheticDefaultImports": true,
-    "alwaysStrict": true,
     "baseUrl": ".",
+    "rootDir": ".",
+    "outDir": "./build",
+    "sourceMap": true,
     "declaration": true,
     "diagnostics": true,
-    "esModuleInterop": true,
     "extendedDiagnostics": true,
     "forceConsistentCasingInFileNames": true,
-    "jsx": "react",
     "lib": ["dom", "es6", "es7", "es2017.object"],
     "module": "esnext",
     "moduleResolution": "node",
+
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "outDir": "./build",
+    "strict": true,
+
     "pretty": true,
     "removeComments": true,
-    "rootDir": ".",
-    "sourceMap": true,
+    "target": "es5",
+
+    "allowSyntheticDefaultImports": true,
+    "alwaysStrict": true,
+    "esModuleInterop": true,
+    "jsx": "react",
     "strictNullChecks": true,
-    "suppressImplicitAnyIndexErrors": true,
-    "target": "es5"
+    "suppressImplicitAnyIndexErrors": true
   },
   "exclude": [
     "node_modules",

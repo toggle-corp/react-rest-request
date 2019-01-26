@@ -32,7 +32,7 @@ module.exports = {
         extensions: ['.ts', '.tsx', '.js'],
     },
 
-    devtool: 'cheap-module-eval-source-map',
+    devtool: 'inline-source-map',
 
     module: {
         rules: [
@@ -40,7 +40,7 @@ module.exports = {
                 test: /\.tsx?$/,
                 include: appSrc,
                 use: [
-                    'awesome-typescript-loader',
+                    'ts-loader',
                 ],
             },
         ],

@@ -1,6 +1,13 @@
 import { isTruthy, noOp, resolve } from './utils';
 
-const createPlaceholderFn = (text: string, logInfo: boolean, logWarning: boolean) => (_: string, response?: object) => {
+const createPlaceholderFn = (
+    text: string,
+    logInfo: boolean,
+    logWarning: boolean,
+) => (
+    _: string,
+    response?: object,
+) => {
     if (logWarning) {
         console.warn(text);
     }
@@ -20,8 +27,7 @@ export const enum methods {
 export const jsonHeaders = {
     Accept: 'application/json',
     'Content-Type': 'application/json; charset=utf-8',
-}
-
+};
 
 /*
  * Parse url params and return an key-value pair
@@ -57,7 +63,7 @@ export function prepareUrlParams(params: { [key: string]: string | string[] }) {
 }
 
 interface TransformFunc<A, B>{
-    (val: A): B
+    (val: A): B;
 }
 
 interface PollFunc {
@@ -68,31 +74,31 @@ export interface HandlerFunc {
 }
 
 export interface RestAttributes {
-    key: string,
+    key: string;
 
-    url: string | TransformFunc<string, string>,
-    params: object | TransformFunc<string, object>,
+    url: string | TransformFunc<string, string>;
+    params: object | TransformFunc<string, object>;
 
-    delay?: number,
+    delay?: number;
 
-    shouldRetry?: boolean,
-    retryTime?: number,
-    maxRetryAttempts?: number,
+    shouldRetry?: boolean;
+    retryTime?: number;
+    maxRetryAttempts?: number;
 
-    shouldPoll?: PollFunc,
-    pollTime?: number,
-    maxPollAttempts?: number,
+    shouldPoll?: PollFunc;
+    pollTime?: number;
+    maxPollAttempts?: number;
 
-    logWarning?: boolean,
-    logInfo?: boolean,
-    onSuccess?: HandlerFunc,
-    onFailure?: HandlerFunc,
-    onFatal ?: HandlerFunc,
-    onAbort?: TransformFunc<string, void>,
+    logWarning?: boolean;
+    logInfo?: boolean;
+    onSuccess?: HandlerFunc;
+    onFailure?: HandlerFunc;
+    onFatal ?: HandlerFunc;
+    onAbort?: TransformFunc<string, void>;
 
-    onPreLoad?: TransformFunc<string, void>,
-    onPostLoad?: TransformFunc<string, void>,
-    onAfterLoad?: TransformFunc<string, void>,
+    onPreLoad?: TransformFunc<string, void>;
+    onPostLoad?: TransformFunc<string, void>;
+    onAfterLoad?: TransformFunc<string, void>;
 }
 
 export class RestRequest {
@@ -163,10 +169,26 @@ export class RestRequest {
         this.params = params;
         this.delay = delay;
 
-        this.success = onSuccess || createPlaceholderFn('No success callback defined', logInfo, logWarning);
-        this.failure = onFailure || createPlaceholderFn('No failure callback defined', logInfo, logWarning);
-        this.fatal = onFatal || createPlaceholderFn('No fatal callback defined', logInfo, logWarning);
-        this.abort = onAbort || createPlaceholderFn('No abort callback defined', logInfo, logWarning);
+        this.success = onSuccess || createPlaceholderFn(
+            'No success callback defined',
+            logInfo,
+            logWarning,
+        );
+        this.failure = onFailure || createPlaceholderFn(
+            'No failure callback defined',
+            logInfo,
+            logWarning,
+        );
+        this.fatal = onFatal || createPlaceholderFn(
+            'No fatal callback defined',
+            logInfo,
+            logWarning,
+        );
+        this.abort = onAbort || createPlaceholderFn(
+            'No abort callback defined',
+            logInfo,
+            logWarning,
+        );
 
         this.preLoad = onPreLoad || noOp;
         this.postLoad = onPostLoad || noOp;

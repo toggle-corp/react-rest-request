@@ -3,13 +3,16 @@ import { ClientAttributes, NewProps, ExtendedContextState } from './declarations
 import { createRequestClient } from './RequestClient';
 
 interface JustProps {
-    url: string,
-    method: string,
-    query?: { [key: string]: string },
-    body?: object,
-    options?: object,
-    changeParams: unknown,
-    onRequestChange(request: ExtendedContextState<undefined> | undefined, changeParams: unknown): void;
+    url: string;
+    method: string;
+    query?: { [key: string]: string };
+    body?: object;
+    options?: object;
+    changeParams: unknown;
+    onRequestChange(
+        request: ExtendedContextState<undefined> | undefined,
+        changeParams: unknown,
+    ): void;
 }
 type ExtendedProps = NewProps<JustProps, undefined>;
 
@@ -41,4 +44,5 @@ class HandlerComponent extends React.PureComponent<ExtendedProps> {
     }
 }
 
+// tslint:disable-next-line variable-name
 export const RequestHandler = createRequestClient(requests)(HandlerComponent);

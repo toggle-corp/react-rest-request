@@ -14,27 +14,33 @@ import {
 const emptyObject = {};
 
 interface Request {
-    running: boolean,
-    data: CoordinatorAttributes,
-    stop(): void,
-    start(): void,
+    running: boolean;
+    data: CoordinatorAttributes;
+    stop(): void;
+    start(): void;
 }
 
 interface MyParams {
-    method: string,
-    headers: { [key: string]: string },
-    body?: string,
+    method: string;
+    headers: { [key: string]: string };
+    body?: string;
 }
 
 interface Attributes<Props, NewProps>{
-    transformUrl?(url: string, props: Props): string,
-    transformProps(props: Props): NewProps,
-    transformParams?(params: MyParams, props: Props): object,
-    transformResponse?(body: object, data: CoordinatorAttributes): object,
-    transformErrors?(body: object, data: CoordinatorAttributes): object,
+    transformUrl?(url: string, props: Props): string;
+    transformProps(props: Props): NewProps;
+    transformParams?(params: MyParams, props: Props): object;
+    transformResponse?(body: object, data: CoordinatorAttributes): object;
+    transformErrors?(body: object, data: CoordinatorAttributes): object;
 }
 
-export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes<Props, NewProps>) => (WrappedComponent: React.ComponentType<NewProps>) => {
+export const createRequestCoordinator = <Props, NewProps>(
+    attributes: Attributes<Props,
+    NewProps>,
+) => (
+    // tslint:disable-next-line variable-name
+    WrappedComponent: React.ComponentType<NewProps>,
+) => {
     const {
         transformParams,
         transformResponse,
@@ -46,7 +52,7 @@ export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes
     class Coordinator extends React.Component<Props, Context['state']> {
         private mounted: boolean = false;
         private requests: { [key:string]: Request } = {};
-        private requestGroups: { [key: string]: string[] }= {};
+        private requestGroups: { [key: string]: string[] } = {};
 
         constructor(props: Props) {
             super(props);
@@ -63,7 +69,7 @@ export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes
             this.mounted = false;
         }
 
-        private forEachRequest = (callback: (data: Request ) => void) => {
+        private forEachRequest = (callback: (data: Request) => void) => {
             Object.keys(this.requests).forEach((key) => {
                 callback(this.requests[key]);
             });
@@ -72,7 +78,7 @@ export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes
         private stopRequest: Context['stopRequest'] = (key) => {
             this.setState({ [key]: {} }, () => {
                 const request = this.requests[key];
-                if (request ) {
+                if (request) {
                     request.stop();
                 }
             });
