@@ -14,7 +14,7 @@ module.exports = {
         path: appDist,
         publicPath: '/',
         filename: 'index.js',
-        library: 'ravl',
+        library: 'react-rest-request',
         libraryTarget: 'umd',
     },
 
@@ -30,7 +30,7 @@ module.exports = {
         hash: true,
     },
     resolve: {
-        extensions: ['.ts', '.tsx', '.js'],
+        extensions: ['.ts', '.tsx', '.js', '.jsx'],
     },
 
     devtool: 'inline-source-map',

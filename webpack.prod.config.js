@@ -2,7 +2,7 @@ const path = require('path');
 
 const CircularDependencyPlugin = require('circular-dependency-plugin');
 const CleanWebpackPlugin = require('clean-webpack-plugin');
-const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
+// const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 
 const appBase = process.cwd();
 const appSrc = path.resolve(appBase, 'src/');
@@ -15,7 +15,7 @@ module.exports = {
         path: appDist,
         publicPath: '/',
         filename: 'index.js',
-        library: 'ravl',
+        library: 'react-rest-request',
         libraryTarget: 'umd',
     },
     mode: 'production',
@@ -30,11 +30,12 @@ module.exports = {
         hash: true,
     },
     resolve: {
-        extensions: ['.ts', '.tsx', '.js'],
+        extensions: ['.ts', '.tsx', '.js', '.jsx'],
     },
 
     devtool: 'source-map',
 
+    /*
     optimization: {
         minimizer: [
             new UglifyJsPlugin({
@@ -57,6 +58,7 @@ module.exports = {
         },
         runtimeChunk: true,
     },
+    */
 
     module: {
         rules: [
