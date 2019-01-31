@@ -30,7 +30,7 @@ export const createRequestClient = <Props extends object, Params>(
         private canonicalKeys: {
             [key: string]: string,
         };
-        private beforeMountOverrides?: {
+        private beforeMountOverrides: {
             [key: string]: ExtensionState<Params>,
         };
 
@@ -59,7 +59,7 @@ export const createRequestClient = <Props extends object, Params>(
         }
 
         componentDidMount() {
-            this.beforeMountOverrides = undefined;
+            this.beforeMountOverrides = {};
 
             requestsOnMount.forEach((key) => {
 
@@ -205,15 +205,21 @@ export const createRequestClient = <Props extends object, Params>(
                     options: resolve(options, myArgs),
                     extras: resolve(extras, myArgs),
 
-                    onSuccess: () => onSuccess && (
-                        (args: onSuccessArgument) => onSuccess({ ...args, ...myArgs })
-                    ),
-                    onFailure: () => onFailure && (
-                        (args: onFailureArgument) => onFailure({ ...args, ...myArgs })
-                    ),
-                    onFatal: () => onFatal && (
-                        (args: onFatalArgument) => onFatal({ ...args, ...myArgs })
-                    ),
+                    onSuccess: (args: onSuccessArgument) => {
+                        if (onSuccess) {
+                            onSuccess({ ...args, ...myArgs });
+                        }
+                    },
+                    onFailure: (args: onFailureArgument) => {
+                        if (onFailure) {
+                            onFailure({ ...args, ...myArgs });
+                        }
+                    },
+                    onFatal: (args: onFatalArgument) => {
+                        if (onFatal) {
+                            onFatal({ ...args, ...myArgs });
+                        }
+                    },
 
                     // FIXME: resolve other methods as well
                     ...otherProps,
@@ -246,16 +252,13 @@ export const createRequestClient = <Props extends object, Params>(
         }
 
         private calculateRequests = () => {
-            // if beforeMountOverrides is defined, the component isn't mounted yet
-            // NOTE: is this even required?
-            if (this.beforeMountOverrides) {
-                return this.beforeMountOverrides;
-            }
-
             const props = requestsConsumed.map(this.calculatePropForKey);
             // Check if every prop is unchanged
             if (props.every(props => !props.changed)) {
-                return this.lastProps;
+                return {
+                    ...this.beforeMountOverrides,
+                    ...this.lastProps,
+                };
             }
 
             return props.reduce(
@@ -263,7 +266,7 @@ export const createRequestClient = <Props extends object, Params>(
                     ...acc,
                     [prop.key]: prop.value,
                 }),
-                {},
+                { ...this.beforeMountOverrides },
             );
         }
 
