@@ -5,8 +5,8 @@
     "main": "build/index.js",
     "typings": "build/src/index.d.ts",
     "scripts": {
-        "build": "webpack --config webpack.dev.config.js --mode=development",
-        "prepare": "webpack --config webpack.prod.config.js --mode=production"
+        "prepare": "webpack --config webpack.prod.config.js --mode=production",
+        "build": "webpack --config webpack.dev.config.js --mode=development"
     },
     "repository": {
         "type": "git",
