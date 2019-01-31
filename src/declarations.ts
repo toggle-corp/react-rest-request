@@ -31,7 +31,7 @@ export interface CoordinatorAttributes {
 // COORDINATOR CONTEXT
 
 export interface ContextState {
-    pending?: boolean;
+    pending: boolean;
     response?: object;
     responseError?: object;
     responseStatus?: number;
@@ -46,10 +46,10 @@ export interface Context {
 // CLIENT CONTEXT
 
 export interface ExtensionState<Params> {
-    pending?: boolean;
+    pending: boolean;
     setDefaultParams(params: Params): void;
-    do?(params?: Params): void;
-    abort?(): void;
+    do(params?: Params): void;
+    abort(): void;
 }
 
 export type ExtendedContextState<Params> = ExtensionState<Params> & ContextState;

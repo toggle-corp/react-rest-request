@@ -280,7 +280,7 @@ export const createRequestClient = <Props extends object, Params>(
             );
         }
 
-        getProps = (props: Props) => {
+        private getProps = (props: Props) => {
             return Object.assign(
                 {
                     setDefaultRequestParams: this.setDefaultRequestParams,

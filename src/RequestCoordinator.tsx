@@ -76,7 +76,7 @@ export const createRequestCoordinator = <Props, NewProps>(
         }
 
         private stopRequest: Context['stopRequest'] = (key) => {
-            this.setState({ [key]: {} }, () => {
+            this.setState({ [key]: { pending: false } }, () => {
                 const request = this.requests[key];
                 if (request) {
                     request.stop();
