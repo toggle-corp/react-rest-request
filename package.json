@@ -31,6 +31,7 @@
         "@types/react": "^16.7.18",
         "@types/react-dom": "^16.0.11",
         "circular-dependency-plugin": "^5.0.2",
+        "clean-webpack-plugin": "^1.0.1",
         "jest": "^23.6.0",
         "ts-jest": "^23.10.5",
         "ts-loader": "^5.3.3",
@@ -38,6 +39,7 @@
         "tslint-config-airbnb": "^5.11.1",
         "tslint-react": "^3.6.0",
         "typescript": "^3.2.2",
+        "uglifyjs-webpack-plugin": "^2.1.1",
         "webpack": "^4.28.3",
         "webpack-cli": "^3.2.1"
     }

@@ -1,6 +1,7 @@
 const path = require('path');
 
 const CircularDependencyPlugin = require('circular-dependency-plugin');
+const CleanWebpackPlugin = require('clean-webpack-plugin');
 
 const appBase = process.cwd();
 const appSrc = path.resolve(appBase, 'src/');
@@ -52,5 +53,6 @@ module.exports = {
             allowAsyncCycles: false,
             cwd: appBase,
         }),
+        new CleanWebpackPlugin([appDist], { root: appBase }),
     ],
 };

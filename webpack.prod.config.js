@@ -1,6 +1,8 @@
 const path = require('path');
 
 const CircularDependencyPlugin = require('circular-dependency-plugin');
+const CleanWebpackPlugin = require('clean-webpack-plugin');
+const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 
 const appBase = process.cwd();
 const appSrc = path.resolve(appBase, 'src/');
@@ -31,6 +33,31 @@ module.exports = {
         extensions: ['.ts', '.tsx', '.js'],
     },
 
+    devtool: 'source-map',
+
+    optimization: {
+        minimizer: [
+            new UglifyJsPlugin({
+                sourceMap: true,
+                parallel: true,
+                uglifyOptions: {
+                    mangle: true,
+                    compress: { typeofs: false },
+                },
+            }),
+        ],
+        splitChunks: {
+            cacheGroups: {
+                vendors: {
+                    test: /[\\/]node_modules[\\/]/,
+                    name: 'vendors',
+                    chunks: 'all',
+                },
+            },
+        },
+        runtimeChunk: true,
+    },
+
     module: {
         rules: [
             {
@@ -49,5 +76,6 @@ module.exports = {
             allowAsyncCycles: false,
             cwd: appBase,
         }),
+        new CleanWebpackPlugin([appDist], { root: appBase }),
     ],
 };
