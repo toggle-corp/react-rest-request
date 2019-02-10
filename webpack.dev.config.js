@@ -2,6 +2,7 @@ const path = require('path');
 
 const CircularDependencyPlugin = require('circular-dependency-plugin');
 const CleanWebpackPlugin = require('clean-webpack-plugin');
+const PeerDepsExternalsPlugin = require('peer-deps-externals-webpack-plugin');
 
 const appBase = process.cwd();
 const appSrc = path.resolve(appBase, 'src/');
@@ -54,5 +55,6 @@ module.exports = {
             cwd: appBase,
         }),
         new CleanWebpackPlugin([appDist], { root: appBase }),
+        new PeerDepsExternalsPlugin(),
     ],
 };
