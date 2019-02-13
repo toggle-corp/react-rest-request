@@ -1,5 +1,5 @@
 export type FirstArgument<T> = T extends (arg1: infer U, ...args: any[]) => any ? U : any;
-export type Parameters<T> = T extends (... args: infer T) => any ? T : never;
+export type Parameters<T> = T extends (... args: infer T) => any ? T : undefined[];
 export type ReturnType<T> = T extends (... args: any[]) => infer R ? R : never;
 
 export const isFalsy = (val: unknown | undefined): val is undefined => (
