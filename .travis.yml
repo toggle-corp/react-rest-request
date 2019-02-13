@@ -1,0 +1,29 @@
+language: node_js
+
+sudo: false
+
+node_js:
+  - "11"
+  - "10"
+
+cache: yarn
+
+before_install:
+  - |
+    curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64\
+    > /tmp/cc-test-reporter
+  - chmod +x /tmp/cc-test-reporter
+  - yarn global add codecov
+
+install:
+  - yarn install
+
+before_script:
+  - /tmp/cc-test-reporter before-build
+
+script:
+  - yarn test:coverage
+
+after_success:
+  - /tmp/cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
+  - codecov

@@ -1,4 +1,7 @@
 # react-rest-request
+[![Install Size](https://packagephobia.now.sh/badge?p=@togglecorp/react-rest-request)](https://packagephobia.now.sh/result?p=@toggle-corp/react-rest-request@2.0.7) [![Build Status](https://travis-ci.com/toggle-corp/react-rest-request.svg?branch=develop)](https://travis-ci.com/toggle-corp/react-rest-request) [![Maintainability](https://api.codeclimate.com/v1/badges/6310581b1d6352b7dd4d/maintainability)](https://codeclimate.com/github/toggle-corp/react-rest-request/maintainability) [![Test Coverage](https://api.codeclimate.com/v1/badges/6310581b1d6352b7dd4d/test_coverage)](https://codeclimate.com/github/toggle-corp/react-rest-request/test_coverage) [![codecov](https://codecov.io/gh/toggle-corp/react-rest-request/branch/develop/graph/badge.svg)](https://codecov.io/gh/toggle-corp/react-rest-request)
+
+[![Codecov](https://codecov.io/gh/toggle-corp/react-rest-request/branch/develop/graphs/tree.svg)](https://codecov.io/gh/toggle-corp/react-rest-request)
 
 A powerful request library for react apps to coordinate requests in a page in an easy and flexible way.
 
