@@ -2,6 +2,10 @@ module.exports = {
   "roots": [
     "<rootDir>/src"
   ],
+  "collectCoverageFrom": [
+    "**/*.{ts,tsx}",
+    "!**/node_modules/**",
+  ],
   "transform": {
     "^.+\\.tsx?$": "ts-jest"
   },
