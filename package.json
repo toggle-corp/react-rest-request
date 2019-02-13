@@ -2,12 +2,16 @@
     "name": "@togglecorp/react-rest-request",
     "version": "2.0.7",
     "description": "Rest request library for react app",
+    "files": "build",
     "main": "build/index.js",
+    "module": "build/index.es.js",
     "typings": "build/src/index.d.ts",
     "scripts": {
+        "prepare": "rollup -c",
+        "build": "rollup -c",
+        "watch": "rollup -cw",
         "test": "jest",
-        "prepare": "webpack --config webpack.prod.config.js --mode=production",
-        "build": "webpack --config webpack.dev.config.js --mode=development"
+        "test:coverage": "jest --coverage"
     },
     "repository": {
         "type": "git",
@@ -24,8 +28,7 @@
     },
     "homepage": "https://github.com/toggle-corp/react-rest-request#readme",
     "dependencies": {
-        "hoist-non-react-statics": "^3.2.1",
-        "prop-types": "^15.6.2"
+        "hoist-non-react-statics": "^3.2.1"
     },
     "devDependencies": {
         "@types/hoist-non-react-statics": "^3.0.1",
@@ -33,18 +36,14 @@
         "@types/node": "^10.12.18",
         "@types/react": "^16.7.18",
         "@types/react-dom": "^16.0.11",
-        "circular-dependency-plugin": "^5.0.2",
-        "clean-webpack-plugin": "^1.0.1",
         "jest": "^23.6.0",
-        "peer-deps-externals-webpack-plugin": "^1.0.4",
+        "rollup": "^1.1.2",
+        "rollup-plugin-typescript2": "^0.19.2",
         "ts-jest": "^23.10.5",
         "ts-loader": "^5.3.3",
         "ts-node": "^7.0.1",
         "tslint-config-airbnb": "^5.11.1",
         "tslint-react": "^3.6.0",
-        "typescript": "^3.2.2",
-        "uglifyjs-webpack-plugin": "^2.1.1",
-        "webpack": "^4.28.3",
-        "webpack-cli": "^3.2.1"
+        "typescript": "^3.2.2"
     }
 }

@@ -7,8 +7,8 @@
             4,
             { "SwitchCase": 1 }
         ],
-        "jsx-boolean-value": false,
         "import-name": false,
+        "jsx-boolean-value": false,
         "jsx-no-multiline-js": false
     }
 }
