@@ -1,4 +1,4 @@
-import { isTruthy, noOp, resolve } from './utils';
+import { isDefined, noOp, resolve } from '@togglecorp/fujs';
 
 const createPlaceholderFn = (
     text: string,
@@ -52,7 +52,7 @@ export function parseUrlParams(stringParams: string) {
  */
 export function prepareUrlParams(params: { [key: string]: string | string[] }) {
     return Object.keys(params)
-        .filter(k => isTruthy(params[k]))
+        .filter(k => isDefined(params[k]))
         .map((k) => {
             const param = params[k];
             if (Array.isArray(param)) {

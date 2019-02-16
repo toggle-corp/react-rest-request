@@ -37,6 +37,11 @@
     reflect-metadata "^0.1.12"
     tslib "^1.8.1"
 
+"@togglecorp/fujs@^1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@togglecorp/fujs/-/fujs-1.2.1.tgz#86c723cb73eba180f575b166fce788a483ee710c"
+  integrity sha512-MowRzDCFpRQF6FQswjvE6+5Kt7nSXUrWsqXjW5C3aCzd7JJAmpZiFkcGMqAtLqBO/Dgj/E57dNlhfVHF78Cgvg==
+
 "@types/estree@0.0.39":
   version "0.0.39"
   resolved "https://registry.yarnpkg.com/@types/estree/-/estree-0.0.39.tgz#e177e699ee1b8c22d23174caaa7422644389509f"

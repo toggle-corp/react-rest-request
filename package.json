@@ -28,6 +28,7 @@
     },
     "homepage": "https://github.com/toggle-corp/react-rest-request#readme",
     "dependencies": {
+        "@togglecorp/fujs": "^1.2.1",
         "hoist-non-react-statics": "^3.2.1"
     },
     "devDependencies": {

@@ -1,7 +1,7 @@
 import React from 'react';
 import hoistNonReactStatics from 'hoist-non-react-statics';
+import { randomString, resolve, intersection, FirstArgument } from '@togglecorp/fujs';
 
-import { randomString, resolve, intersection, FirstArgument } from './utils';
 import { RequestContext } from './RequestContext';
 import {
     CoordinatorAttributes,
@@ -24,7 +24,7 @@ export const createRequestClient = <Props extends object, Params>(
     const requestKeys = Object.keys(requests);
     const requestsOnMount = requestKeys.filter(key => requests[key].onMount);
     const requestsConsumed = consume || requestKeys;
-    const requestsConsumedOnMount = intersection(requestsConsumed, requestsOnMount);
+    const requestsConsumedOnMount = [...intersection(new Set(requestsConsumed), new Set(requestsOnMount))];
 
     class View extends React.PureComponent<Props> {
         private canonicalKeys: {
