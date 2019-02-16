@@ -1,4 +1,4 @@
-import { isDefined, noOp, resolve } from '@togglecorp/fujs';
+import { Maybe, isNotDefined, isDefined, noOp, resolve } from '@togglecorp/fujs';
 
 const createPlaceholderFn = (
     text: string,
@@ -50,16 +50,26 @@ export function parseUrlParams(stringParams: string) {
 /*
  * Accept a key-value pair and transform to query string
  */
-export function prepareUrlParams(params: { [key: string]: string | string[] }) {
+export function prepareUrlParams(params: { [key: string]: Maybe<string | number | (string | number)[]> }) {
     return Object.keys(params)
         .filter(k => isDefined(params[k]))
         .map((k) => {
             const param = params[k];
-            if (Array.isArray(param)) {
-                return `${encodeURIComponent(k)}=${encodeURIComponent(param.join(','))}`;
+            if (isNotDefined(param)) {
+                return undefined;
             }
-            return`${encodeURIComponent(k)}=${encodeURIComponent(param)}`;
-        });
+            let val: string;
+            if (Array.isArray(param)) {
+                val = param.join(',');
+            } else if (typeof param === 'number') {
+                val = String(param);
+            } else {
+                val = param;
+            }
+            return`${encodeURIComponent(k)}=${encodeURIComponent(val)}`;
+        })
+        .filter(isDefined)
+        .join('&')
 }
 
 interface TransformFunc<A, B>{
