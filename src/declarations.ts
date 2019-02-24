@@ -88,6 +88,7 @@ type CoordinatorExtensionNonOptional<Props, Params> = {
         ResolveUncertain<Required<CoordinatorAttributes>[key], Props, Params>;
 };
 type OnlyClient<Props, Params> = {
+    isPersistent?: boolean;
     isUnique?: boolean;
     onPropsChanged?: (keyof Props)[] | {
         [key in keyof Props]: InjectionFunctionWithPrev<Props, Params, boolean>

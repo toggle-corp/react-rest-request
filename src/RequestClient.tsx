@@ -23,6 +23,7 @@ export const createRequestClient = <Props extends object, Params>(
 ) => {
     const requestKeys = Object.keys(requests);
     const requestsOnMount = requestKeys.filter(key => requests[key].onMount);
+    const requestsNonPersistent = requestKeys.filter(key => requests[key].isPersistent);
     const requestsConsumed = consume || requestKeys;
     const requestsConsumedOnMount = [...intersection(new Set(requestsConsumed), new Set(requestsOnMount))];
 
@@ -77,6 +78,12 @@ export const createRequestClient = <Props extends object, Params>(
                     // and that this client will be rerendered.
                     this.api.stopRequest(key);
                 }
+            });
+        }
+
+        componentWillUnmount() {
+            requestsNonPersistent.forEach((key) => {
+                this.api.stopRequest(key);
             });
         }
 
@@ -177,6 +184,8 @@ export const createRequestClient = <Props extends object, Params>(
                 onPropsChanged,
                 // @ts-ignore only capturing these values
                 onMount,
+                // @ts-ignore only capturing these values
+                isPersistent,
 
                 onSuccess,
                 onFailure,
