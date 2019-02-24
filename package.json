@@ -1,6 +1,6 @@
 {
     "name": "@togglecorp/react-rest-request",
-    "version": "2.1.0",
+    "version": "2.2.0",
     "description": "Rest request library for react app",
     "files": "build",
     "main": "build/index.js",
