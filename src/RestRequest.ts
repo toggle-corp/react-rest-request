@@ -16,7 +16,7 @@ const createPlaceholderFn = (
     }
 };
 
-export const enum methods {
+export enum methods {
     POST = 'POST',
     GET = 'GET',
     PUT = 'PUT',
