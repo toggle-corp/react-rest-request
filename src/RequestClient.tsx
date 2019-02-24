@@ -23,7 +23,7 @@ export const createRequestClient = <Props extends object, Params>(
 ) => {
     const requestKeys = Object.keys(requests);
     const requestsOnMount = requestKeys.filter(key => requests[key].onMount);
-    const requestsNonPersistent = requestKeys.filter(key => requests[key].isPersistent);
+    const requestsNonPersistent = requestKeys.filter(key => !requests[key].isPersistent);
     const requestsConsumed = consume || requestKeys;
     const requestsConsumedOnMount = [...intersection(new Set(requestsConsumed), new Set(requestsOnMount))];
 

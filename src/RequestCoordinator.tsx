@@ -5,8 +5,6 @@ import { CoordinatorAttributes, Context } from './declarations';
 import { RequestContext } from './RequestContext';
 import {
     RestRequest,
-    methods,
-    jsonHeaders,
     prepareUrlParams,
     HandlerFunc,
 } from './RestRequest';
@@ -20,16 +18,10 @@ interface Request {
     start(): void;
 }
 
-interface MyParams {
-    method: string;
-    headers: { [key: string]: string };
-    body?: string;
-}
-
 interface Attributes<Props, NewProps>{
     transformUrl?(url: string, props: Props): string;
     transformProps(props: Props): NewProps;
-    transformParams?(params: MyParams, props: Props): object;
+    transformParams(data: CoordinatorAttributes, props: Props): object;
     transformResponse?(body: object, data: CoordinatorAttributes): object;
     transformErrors?(body: object, data: CoordinatorAttributes): object;
 }
@@ -88,10 +80,8 @@ export const createRequestCoordinator = <Props, NewProps>(
             const {
                 key,
                 group,
-                method = methods.GET,
                 url,
                 query,
-                body,
                 options = {},
             } = requestData;
 
@@ -105,14 +95,7 @@ export const createRequestCoordinator = <Props, NewProps>(
             }
 
             const calculateParams = () => {
-                const params = {
-                    method,
-                    headers: jsonHeaders,
-                    body: body ? JSON.stringify(body) : undefined,
-                };
-                return transformParams
-                    ? transformParams(params, this.props)
-                    : params;
+                return transformParams(requestData, this.props)
             };
 
             const appendage = query && prepareUrlParams(query);

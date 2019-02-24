@@ -24,11 +24,6 @@ export enum methods {
     PATCH = 'PATCH',
 }
 
-export const jsonHeaders = {
-    Accept: 'application/json',
-    'Content-Type': 'application/json; charset=utf-8',
-};
-
 /*
  * Parse url params and return an key-value pair
  * Input: stringParams (this.props.location.search.replace('?', ''))
