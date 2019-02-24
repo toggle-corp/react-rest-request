@@ -1,4 +1,5 @@
 import React from 'react';
+import { RestAttributes } from './RestRequest';
 
 // TYPES
 
@@ -20,7 +21,7 @@ export interface CoordinatorAttributes {
     url: string;
     body?: object;
     query?: { [key: string]: string };
-    options?: object;
+    options?: Partial<RestAttributes>;
     extras?: object;
 
     onSuccess?: (value: { response: object, status: number }) => void;

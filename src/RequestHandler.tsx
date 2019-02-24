@@ -1,4 +1,5 @@
 import React from 'react';
+import { RestAttributes } from './RestRequest';
 import { ClientAttributes, NewProps, ExtendedContextState } from './declarations';
 import { createRequestClient } from './RequestClient';
 
@@ -7,7 +8,7 @@ interface JustProps {
     method: string;
     query?: { [key: string]: string };
     body?: object;
-    options?: object;
+    options?: Partial<RestAttributes>;
     changeParams: unknown;
     onRequestChange(
         request: ExtendedContextState<undefined> | undefined,

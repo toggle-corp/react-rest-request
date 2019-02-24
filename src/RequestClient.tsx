@@ -148,7 +148,11 @@ export const createRequestClient = <Props extends object, Params>(
         }
 
         private getParams = (key: string, params?: Params) => {
-            return params || this.defaultParamsPerRequest[key] || this.defaultParams;
+            return {
+                ...this.defaultParams,
+                ...this.defaultParamsPerRequest[key],
+                ...params,
+            };
         }
 
         private setDefaultParamsPerRequest = (key: string, params: Params) => {
