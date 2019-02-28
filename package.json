@@ -5,7 +5,7 @@
     "files": "build",
     "main": "build/index.js",
     "module": "build/index.es.js",
-    "typings": "build/src/index.d.ts",
+    "typings": "build/index.d.ts",
     "scripts": {
         "prepare": "rollup -c",
         "build": "rollup -c",
