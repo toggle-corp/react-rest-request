@@ -20,7 +20,7 @@ export interface CoordinatorAttributes {
     method: string;
     url: string;
     body?: object;
-    query?: { [key: string]: string };
+    query?: { [key: string]: string | number | undefined };
     options?: Partial<RestAttributes>;
     extras?: object;
 
@@ -91,7 +91,7 @@ type OnlyClient<Props, Params> = {
     isPersistent?: boolean;
     isUnique?: boolean;
     onPropsChanged?: (keyof Props)[] | {
-        [key in keyof Props]: InjectionFunctionWithPrev<Props, Params, boolean>
+        [key in keyof Props]?: InjectionFunctionWithPrev<Props, Params, boolean>
     };
     onMount?: boolean | InjectionFunction<Props, Params, boolean>;
 };

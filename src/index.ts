@@ -2,4 +2,4 @@ export { RestRequest, methods, parseUrlParams, prepareUrlParams } from './RestRe
 export { createRequestClient } from './RequestClient';
 export { createRequestCoordinator } from './RequestCoordinator';
 export { RequestHandler } from './RequestHandler';
-export { NewProps, ClientAttributes } from './declarations';
+export { NewProps, ClientAttributes, CoordinatorAttributes } from './declarations';

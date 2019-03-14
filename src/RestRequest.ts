@@ -161,7 +161,7 @@ export class RestRequest {
         retryTime = 1000,
         maxRetryAttempts = 5,
 
-        pollTime = 1000,
+        pollTime = 4000,
         maxPollAttempts,
         shouldPoll,
 
