@@ -1,5 +1,13 @@
 import { Maybe, isNotDefined, isDefined, noOp, resolve } from '@togglecorp/fujs';
 
+export enum methods {
+    POST = 'POST',
+    GET = 'GET',
+    PUT = 'PUT',
+    DELETE = 'DELETE',
+    PATCH = 'PATCH',
+}
+
 const createPlaceholderFn = (
     text: string,
     logInfo: boolean,
@@ -15,14 +23,6 @@ const createPlaceholderFn = (
         console.log(response);
     }
 };
-
-export enum methods {
-    POST = 'POST',
-    GET = 'GET',
-    PUT = 'PUT',
-    DELETE = 'DELETE',
-    PATCH = 'PATCH',
-}
 
 /*
  * Parse url params and return an key-value pair
@@ -45,7 +45,11 @@ export function parseUrlParams(stringParams: string) {
 /*
  * Accept a key-value pair and transform to query string
  */
-export function prepareUrlParams(params: { [key: string]: Maybe<string | number | (string | number)[]> }) {
+interface UrlParams {
+    [key: string]: Maybe<string | number | (string | number)[]>;
+}
+
+export function prepareUrlParams(params: UrlParams) {
     return Object.keys(params)
         .filter(k => isDefined(params[k]))
         .map((k) => {
@@ -61,10 +65,10 @@ export function prepareUrlParams(params: { [key: string]: Maybe<string | number 
             } else {
                 val = param;
             }
-            return`${encodeURIComponent(k)}=${encodeURIComponent(val)}`;
+            return `${encodeURIComponent(k)}=${encodeURIComponent(val)}`;
         })
         .filter(isDefined)
-        .join('&')
+        .join('&');
 }
 
 interface TransformFunc<A, B>{
@@ -98,9 +102,10 @@ export interface RestAttributes {
     logInfo?: boolean;
     onSuccess?: HandlerFunc;
     onFailure?: HandlerFunc;
-    onFatal ?: HandlerFunc;
+    onFatal?: HandlerFunc;
     onAbort?: TransformFunc<string, void>;
 
+    onInitialize?: TransformFunc<string, void>;
     onPreLoad?: TransformFunc<string, void>;
     onPostLoad?: TransformFunc<string, void>;
     onAfterLoad?: TransformFunc<string, void>;
@@ -110,40 +115,57 @@ export class RestRequest {
     private key: string;
 
     private url: string | TransformFunc<string, string>;
+
     private params: object | TransformFunc<string, object>;
 
     // initial delay before request is called
     private delay: number;
 
     private shouldRetry: boolean;
+
     private retryTime: number;
+
     private maxRetryAttempts: number;
 
     private shouldPoll?: PollFunc;
+
     private pollTime: number;
+
     private maxPollAttempts?: number;
 
     private success: HandlerFunc;
+
     private failure: HandlerFunc;
+
     private fatal: HandlerFunc;
+
     private abort: TransformFunc<string, void>;
+
     private preLoad: TransformFunc<string, void>;
+
+    private initialize: TransformFunc<string, void>;
+
     private postLoad: TransformFunc<string, void>;
+
     private afterLoad: TransformFunc<string, void>;
 
     private logWarning: boolean;
+
     private logInfo: boolean;
 
     private pollId?: number;
+
     private pollCount: number = 1;
 
     private retryId?: number;
+
     private retryCount: number = 1;
 
     private aborted: boolean = false;
+
     private requestCompleted: boolean = false;
 
-    constructor({
+    public constructor({
         key,
         url,
         params,
@@ -153,6 +175,7 @@ export class RestRequest {
         onFatal,
         onAbort,
 
+        onInitialize,
         onPreLoad,
         onPostLoad,
         onAfterLoad,
@@ -195,6 +218,7 @@ export class RestRequest {
             logWarning,
         );
 
+        this.initialize = onInitialize || noOp;
         this.preLoad = onPreLoad || noOp;
         this.postLoad = onPostLoad || noOp;
         this.afterLoad = onAfterLoad || noOp;
@@ -213,10 +237,12 @@ export class RestRequest {
         this.retryTime = retryTime;
         this.maxRetryAttempts = maxRetryAttempts;
         this.shouldRetry = shouldRetry;
-
     }
 
-    start = () => {
+    public start = () => {
+        // NOTE: pre load should be called as request is sure to be called
+        this.initialize(this.key);
+
         this.retryId = window.setTimeout(this.internalStart, this.delay);
     }
 
@@ -305,7 +331,7 @@ export class RestRequest {
         }
     }
 
-    stop = () => {
+    public stop = () => {
         if (this.requestCompleted) {
             return;
         }

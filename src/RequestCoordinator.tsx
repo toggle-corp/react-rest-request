@@ -11,13 +11,6 @@ import {
 
 const emptyObject = {};
 
-interface Request {
-    running: boolean;
-    data: CoordinatorAttributes;
-    stop(): void;
-    start(): void;
-}
-
 interface Attributes<Props, NewProps>{
     transformUrl?(url: string, props: Props): string;
     transformProps(props: Props): NewProps;
@@ -26,13 +19,14 @@ interface Attributes<Props, NewProps>{
     transformErrors?(body: object, data: CoordinatorAttributes): object;
 }
 
-export const createRequestCoordinator = <Props, NewProps>(
-    attributes: Attributes<Props,
-    NewProps>,
-) => (
-    // tslint:disable-next-line variable-name
-    WrappedComponent: React.ComponentType<NewProps>,
-) => {
+interface Request {
+    running: boolean;
+    data: CoordinatorAttributes;
+    stop(): void;
+    start(): void;
+}
+
+export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes<Props, NewProps>) => (WrappedComponent: React.ComponentType<NewProps>) => {
     const {
         transformParams,
         transformResponse,
@@ -43,20 +37,24 @@ export const createRequestCoordinator = <Props, NewProps>(
 
     class Coordinator extends React.Component<Props, Context['state']> {
         private mounted: boolean = false;
-        private requests: { [key:string]: Request } = {};
+
+        private requests: { [key: string]: Request } = {};
+
         private requestGroups: { [key: string]: string[] } = {};
 
-        constructor(props: Props) {
+        public constructor(props: Props) {
             super(props);
             this.state = {};
+            // store information about every request
+            // Coordinator updates response, responseError and responseStatus
         }
 
-        componentDidMount() {
+        public componentDidMount() {
             this.mounted = true;
             this.forEachRequest(request => request.start());
         }
 
-        componentWillUnmount() {
+        public componentWillUnmount() {
             this.forEachRequest(request => request.stop());
             this.mounted = false;
         }
@@ -67,6 +65,7 @@ export const createRequestCoordinator = <Props, NewProps>(
             });
         }
 
+        // called as api by children
         private stopRequest: Context['stopRequest'] = (key) => {
             this.setState({ [key]: { pending: false } }, () => {
                 const request = this.requests[key];
@@ -76,6 +75,7 @@ export const createRequestCoordinator = <Props, NewProps>(
             });
         }
 
+        // called as api by children
         private startRequest: Context['startRequest'] = (requestData, ignoreIfExists) => {
             const {
                 key,
@@ -94,9 +94,9 @@ export const createRequestCoordinator = <Props, NewProps>(
                 oldRequest.stop();
             }
 
-            const calculateParams = () => {
-                return transformParams(requestData, this.props)
-            };
+            const calculateParams = () => (
+                transformParams(requestData, this.props)
+            );
 
             const appendage = query && prepareUrlParams(query);
             const preparedUrl = appendage && appendage.length > 0 ? `${url}?${appendage}` : url;
@@ -106,9 +106,10 @@ export const createRequestCoordinator = <Props, NewProps>(
                 key,
                 url: transformUrl ? transformUrl(preparedUrl, this.props) : preparedUrl,
                 params: calculateParams,
-                onPreLoad: this.handlePreLoad,
-                onAfterLoad: this.handleAfterLoad,
-                onAbort: this.handleAbort,
+                onPreLoad: this.handleRequestStart,
+                onInitialize: this.handleRequestStart,
+                onAfterLoad: this.handleRequestDone,
+                onAbort: this.handleRequestDone,
                 onSuccess: this.handleSuccess,
                 onFailure: this.handleFailure,
                 onFatal: this.handleFatal,
@@ -122,8 +123,6 @@ export const createRequestCoordinator = <Props, NewProps>(
                     this.requests[key].running = false;
                 },
                 start: () => {
-                    // Force preload to set proper state before request actually start
-                    this.handlePreLoad(key);
                     this.requests[key].running = true;
                     request.start();
                 },
@@ -137,12 +136,13 @@ export const createRequestCoordinator = <Props, NewProps>(
                 }
             }
 
+            // FIXME: when is this not the case?
             if (this.mounted) {
                 this.requests[key].start();
             }
         }
 
-        private handlePreLoad = (key: string) => {
+        private handleRequestStart = (key: string) => {
             const newState = { pending: true };
 
             // Calculate group state
@@ -157,7 +157,8 @@ export const createRequestCoordinator = <Props, NewProps>(
         }
 
         private handleRequestDone = (key: string) => {
-            const requestState = this.state[key] || emptyObject;
+            const { state } = this;
+            const requestState = state[key] || emptyObject;
             const newState = {
                 ...requestState,
                 pending: false,
@@ -169,19 +170,11 @@ export const createRequestCoordinator = <Props, NewProps>(
                 [group]: {
                     pending: this.requestGroups[group]
                         .filter(k => k !== key)
-                        .some(k => !!this.state[k].pending),
+                        .some(k => !!state[k].pending),
                 },
             } : emptyObject;
 
             this.setState({ [key]: newState, ...groupState });
-        }
-
-        private handleAfterLoad = (key: string) => {
-            this.handleRequestDone(key);
-        }
-
-        private handleAbort = (key: string) => {
-            this.handleRequestDone(key);
         }
 
         private handleSuccess: HandlerFunc = (key, body, status) => {
@@ -200,7 +193,8 @@ export const createRequestCoordinator = <Props, NewProps>(
                 onSuccess({ response, status });
             }
 
-            const requestState = this.state[key] || emptyObject;
+            const { state } = this;
+            const requestState = state[key] || emptyObject;
             const newState = {
                 ...requestState,
                 response,
@@ -227,7 +221,8 @@ export const createRequestCoordinator = <Props, NewProps>(
                 onFailure({ error, status });
             }
 
-            const requestState = this.state[key] || emptyObject;
+            const { state } = this;
+            const requestState = state[key] || emptyObject;
             const newState = {
                 ...requestState,
                 response: undefined,
@@ -244,7 +239,8 @@ export const createRequestCoordinator = <Props, NewProps>(
                 onFatal({ error });
             }
 
-            const requestState = this.state[key] || emptyObject;
+            const { state } = this;
+            const requestState = state[key] || emptyObject;
             const newState = {
                 ...requestState,
                 response: undefined,
@@ -254,7 +250,7 @@ export const createRequestCoordinator = <Props, NewProps>(
             this.setState({ [key]: newState });
         }
 
-        render() {
+        public render() {
             const contextApi = {
                 startRequest: this.startRequest,
                 stopRequest: this.stopRequest,

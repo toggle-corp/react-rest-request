@@ -29,18 +29,25 @@ const requests: { [key: string]: ClientAttributes<JustProps, undefined> } = {
 };
 
 class HandlerComponent extends React.PureComponent<ExtendedProps> {
-    constructor(props: ExtendedProps) {
+    public constructor(props: ExtendedProps) {
         super(props);
         props.onRequestChange(props.requests.request, props.changeParams);
     }
 
-    componentWillReceiveProps(nextProps: ExtendedProps) {
-        if (this.props.requests.request !== nextProps.requests.request) {
-            nextProps.onRequestChange(nextProps.requests.request, nextProps.changeParams);
+    public componentWillReceiveProps(nextProps: ExtendedProps) {
+        const {
+            requests: oldRequests,
+        } = this.props;
+        const {
+            requests: newRequests,
+            changeParams,
+        } = nextProps;
+        if (oldRequests.request !== newRequests.request) {
+            nextProps.onRequestChange(newRequests.request, changeParams);
         }
     }
 
-    render() {
+    public render() {
         return null;
     }
 }

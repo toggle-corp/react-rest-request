@@ -4,7 +4,7 @@ interface Props {
     id: number,
     name: string,
     method: string,
-    query?: { [key: string]: string },
+    query?: { [key: string]: string | string[] | number },
     body?: object,
 }
 
