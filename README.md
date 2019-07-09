@@ -3,7 +3,8 @@
 
 [![Codecov](https://codecov.io/gh/toggle-corp/react-rest-request/branch/develop/graphs/tree.svg)](https://codecov.io/gh/toggle-corp/react-rest-request)
 
-A powerful request library for react apps to coordinate requests in a page in an easy and flexible way.
+A powerful request library for react apps to coordinate requests in a page in
+an easy and flexible way.
 
 ## Installation
 
@@ -13,11 +14,16 @@ yarn add @togglecorp/react-rest-request
 
 ## Setting up
 
-The core part of the library consists of two higher order components: `RequestCoordinator` and `RequestClient`.
+The core part of the library consists of two higher order components:
+`RequestCoordinator` and `RequestClient`.
 
-The coordinator is responsible for coordinating all requests in a page. The clients are used to create individual requests in different components of the page.
+The coordinator is responsible for coordinating all requests in a page. The
+clients are used to create individual requests in different components of the
+page.
 
-Before using this library in a project, it is first recommended to create the actual HOCs using `createRequestCoordinator` and `createRequestClient` helper functions.
+Before using this library in a project, it is first recommended to create the
+actual HOCs using `createRequestCoordinator` and `createRequestClient` helper
+functions.
 
 ```js
 // request.js
@@ -40,53 +46,66 @@ export const RequestCoordinator = createRequestCoordinator({
     transformResponse: (response, props) => response,
     transformErrors: (errors, props) => errors,
 });
-
-export const RequestClient = createRequestClient();
-export const requestMethods = RestRequest.methods;
 ```
 
 ## Usage
 
-### Coordinator
+### Request Coordinator
 
-Use the coordinator at some top level component so that you can create and use multiple request clients in any of its descendents.
+Use the coordinator at some top level component so that you can create and use
+multiple request clients in any of its descendents.
 
 ```js
+// UserPage.js
 import { RequestCoordinator } from '#request';
 
 @RequestCoordinator
 class UserPage extends React.PureComponent {
-    // ...
 }
 ```
 
-### Client
+### Request Client
 
 The client is used to make actual requests and access the response using props.
 
 ```js
-import { RequestClient, requestMethods } from '#request';
+// UserForm.js
+import { createRequestClient, methods } from '#request';
 
 const requests = {
     saveUserDetails: {
-        method: requestMethods.PUT,
+        method: methods.PUT,
         url: ({ props }) => `/users/${props.userId}/`,
         body: ({ params: { userData } }) => userData,
     },
 };
 
-@RequestClient(requests)
+@createRequestClient(requests)
 class UserForm extends React.PureComponent {
-    // ...
+    constructor(props) {
+        super(props);
+        this.state = {
+            formData: {},
+        };
+    }
 
     handleSave = () => {
-        this.props.saveUserDetails.do({
-            userData: this.state.formData,
+        const {
+            requests: { saveUserDetails },
+        } = this.props;
+        const { formData } = this.state;
+
+        saveUserDetails.do({
+            userData: formData,
         });
     }
 
     render() {
-        const { saveUserDetails } = this.props;
+        const {
+            requests: {
+                saveUserDetails,
+            },
+        } = this.props;
 
         const {
             pending,        // request is being made, useful to show loading animation
@@ -95,27 +114,32 @@ class UserForm extends React.PureComponent {
             responseError,  // error when request fails
         } = saveUserDetails;
 
-        // ...
+        return null;
     }
 }
 ```
 
-#### Requests settings
+#### Writing requests
 
-When using the `RequestClient` HOC, a `requests` object needs to be provided which contains details for each request using key, value settings.
+When using the `RequestClient` HOC, a `requests` object needs to be provided
+which contains details for each request using key, value settings.
 
 Following is the syntax for this `requests` object.
 
 ```js
 const requests = {
     [request_name]: {
-        [key]: [value],
+        [option_a]: [value],
+        [option_b]: [value],
         // ...
     },
 };
 ```
 
-Here the `request_name` is a unique prop that the component will receive for handling the request and its response. For each such request, it is required to provide a number of key-value pair to define request settings such as its url, request method, body etc.
+Here the `request_name` is a unique prop that the component will receive for
+handling the request and its response. For each such request, it is required to
+provide a number of key-value pair to define request settings such as its url,
+request method, body etc.
 
 Each of these settings can either a have fixed value, for example:
 
@@ -123,40 +147,47 @@ Each of these settings can either a have fixed value, for example:
     url: '/api/users/',
 ```
 
-Or, it can be a function of signature: `({ props, params }) => {}` which can return a dynamic value, for example:
+Or, it can be a function of signature: `({ props, params }) => {}` which can
+return a value, for example:
 
 ```js
     url: ({ props }) => `/api/users/${props.userId}`,
 ```
 
-Here `props` is the component's props and `params` is something that the user can provide when making the request.
+Here `props` is the component's props and `params` is value that the user can
+provide when making the request.
 
-Each request is now made available to the component using `request_name` prop. The `do` method of this request prop can be used to make the actual request. The `do` method can optionally take a `params` that can be accessed from the request settings above.
-
-```js
-    this.props.[request_name].do(params);
-```
-
-The same prop also contains other info such as the pending status, the response body and any error encountered when making the request, as shown in the example in previous section.
-
-#### Callbacks
-
-`onSuccess`, `onFailure` and `onFatal` are some callbacks that can be provided as the request settings.
+Each request is now made available to the component using `request_name` prop.
+The `do` method of this request prop can be used to make the actual request.
+The `do` method can optionally take a `params` that can be accessed from the
+request settings above.
 
 ```js
-const requests = {
-    userSaveRequest: {
-        // ...
-        onSuccess: ({ props, response }) => {
-            props.setUserReduxAction(response);
-        },
-    },
-};
+    this.props.requests[request_name].do(params);
 ```
 
-#### Auto requests
+The same prop also contains other info such as the pending status, the response
+body and any error encountered when making the request, as shown in the example
+in previous section.
 
-Request can be triggered automatically when the component mounts:
+The list of options for a request are listed below:
+1. method
+2. url
+3. query
+4. body
+5. options
+6. onSuccess
+7. onFailure
+8. onFatal
+9. onMount
+10. onPropsChanged
+11. isUnique
+12. isPersistent
+13. group
+14. extras
+
+Request can be triggered automatically when the component mounts using
+`onMount` option:
 
 ```js
 const requests = {
@@ -166,13 +197,12 @@ const requests = {
 
         // or a function that returns true/false value based on some props
         onMount: ({ props }) => !props.userData,
-
-        // ...
     },
 };
 ```
 
-Similarly a request can be retriggered everytime some prop changes:
+Similarly a request can be retriggered everytime some prop changes using
+`onPropsChanged` option:
 
 ```js
 const requests = {
@@ -198,14 +228,13 @@ const requests = {
 }
 ```
 
-Because, user cannot provide params when these requests are auto triggered,
-a method `setDefaultParams` is provided. User can then set default params to use
+Because, user cannot provide params when these requests are auto-triggered, a
+method `setDefaultParams` is provided. User can then set default params to use
 when actual params is not provided when making the request.
 
 ```js
 const requests = {
     userDetailsRequest: {
-        // ...
         onMount: true,
         onSuccess: ({ response, params: { setUserProject } }) => {
             setUserProject(response.project);
@@ -218,15 +247,20 @@ const TestComponent extends React.PureComponent {
     constructor(props) {
         super(props);
 
-        // ...
-
-        props.userDetailsRequest.setDefaultParams({
+        props.requests.userDetailsRequest.setDefaultParams({
             setUserProject: (project) => {
                 this.setState({ project });
             },
         });
     }
-
-    // ...
 }
 ```
+
+Request can be made unique inside a RequestCoordinator using `isUnique` option.
+
+Request life can be bound to RequestCoordinator using `isPersistent` option.
+By default, a request is aborted after the RequestClient is unmounted.
+
+Request can be grouped using `group` option.
+
+Some extra values can be passed to RequestCoordinator using `extras` option.
