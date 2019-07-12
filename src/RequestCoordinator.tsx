@@ -26,6 +26,7 @@ interface Request {
     start(): void;
 }
 
+// eslint-disable-next-line import/prefer-default-export, max-len
 export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes<Props, NewProps>) => (WrappedComponent: React.ComponentType<NewProps>) => {
     const {
         transformParams,
@@ -76,7 +77,7 @@ export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes
         }
 
         // called as api by children
-        private startRequest: Context['startRequest'] = (requestData, ignoreIfExists) => {
+        private startRequest: Context['startRequest'] = (requestData, ignoreIfExists, placeholder = false) => {
             const {
                 key,
                 group,
@@ -136,8 +137,7 @@ export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes
                 }
             }
 
-            // FIXME: when is this not the case?
-            if (this.mounted) {
+            if (this.mounted && !placeholder) {
                 this.requests[key].start();
             }
         }

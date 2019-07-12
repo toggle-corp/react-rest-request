@@ -53,4 +53,5 @@ class HandlerComponent extends React.PureComponent<ExtendedProps> {
 }
 
 // tslint:disable-next-line variable-name
+// eslint-disable-next-line import/prefer-default-export
 export const RequestHandler = createRequestClient(requests)(HandlerComponent);

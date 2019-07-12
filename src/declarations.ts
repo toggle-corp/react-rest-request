@@ -40,7 +40,11 @@ export interface ContextState {
 }
 
 export interface Context {
-    startRequest(requestData: CoordinatorAttributes, ignoreIfExists?: boolean): void;
+    startRequest(
+        requestData: CoordinatorAttributes,
+        ignoreIfExists?: boolean,
+        placeholder?: boolean,
+    ): void;
     stopRequest(key: string): void;
     state: { [key: string]: ContextState };
 }

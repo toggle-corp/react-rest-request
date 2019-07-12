@@ -5,6 +5,7 @@ import { Context } from './declarations';
 const defaultState = {
     startRequest: () => {},
     stopRequest: () => {},
+    notifyStartRequest: () => {},
     state: {},
 };
 
