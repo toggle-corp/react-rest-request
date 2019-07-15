@@ -26,6 +26,7 @@ interface Request {
     start(): void;
 }
 
+// eslint-disable-next-line import/prefer-default-export, max-len
 export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes<Props, NewProps>) => (WrappedComponent: React.ComponentType<NewProps>) => {
     const {
         transformParams,
@@ -36,12 +37,6 @@ export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes
     } = attributes;
 
     class Coordinator extends React.Component<Props, Context['state']> {
-        private mounted: boolean = false;
-
-        private requests: { [key: string]: Request } = {};
-
-        private requestGroups: { [key: string]: string[] } = {};
-
         public constructor(props: Props) {
             super(props);
             this.state = {};
@@ -58,6 +53,12 @@ export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes
             this.forEachRequest(request => request.stop());
             this.mounted = false;
         }
+
+        private mounted: boolean = false;
+
+        private requests: { [key: string]: Request } = {};
+
+        private requestGroups: { [key: string]: string[] } = {};
 
         private forEachRequest = (callback: (data: Request) => void) => {
             Object.keys(this.requests).forEach((key) => {
@@ -136,7 +137,6 @@ export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes
                 }
             }
 
-            // FIXME: when is this not the case?
             if (this.mounted) {
                 this.requests[key].start();
             }

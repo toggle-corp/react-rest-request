@@ -1,24 +1,23 @@
 import { ClientAttributes } from './declarations';
 
 interface Props {
-    id: number,
-    name: string,
-    method: string,
-    query?: { [key: string]: string | string[] | number },
-    body?: object,
+    id: number;
+    name: string;
+    method: string;
+    query?: { [key: string]: string | string[] | number };
+    body?: object;
 }
 
 interface Params {
-    test: boolean,
+    test: boolean;
 }
 
+// eslint-disable-next-line import/prefer-default-export
 export const request: ClientAttributes<Props, Params> = {
     method: ({ props }) => props.name,
     url: '/deep/',
     onPropsChanged: ['id'],
-    query: ({ props }) => {
-        return props.query
-    },
+    query: ({ props }) => props.query,
     body: ({ props }) => props.body,
     isUnique: false,
     onSuccess: ({ response, status }) => {

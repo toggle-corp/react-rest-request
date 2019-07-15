@@ -6,14 +6,15 @@ import { RequestContext } from './RequestContext';
 import {
     CoordinatorAttributes,
     ClientAttributes,
-    Context,
     ExtendedContextState,
     NewProps,
+    InjectionFunctionWithPrev,
 } from './declarations';
 
 const emptyObject = {};
 
 // tslint:disable-next-line max-line-length
+// eslint-disable-next-line import/prefer-default-export, max-len
 export function createRequestClient<Props extends object, Params>(requests: { [key: string]: ClientAttributes<Props, Params>} = {}, consume?: string[]) {
     return (WrappedComponent: React.ComponentType<NewProps<Props, Params>>) => {
         const requestKeys = Object.keys(requests);
@@ -22,44 +23,18 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
         const requestsConsumed = consume || requestKeys;
 
         interface State {
-            // NOTE: need to block rendering of client until
-            // RequestClient.componentDidMount is called
-            //
-            // We initiate requests with onMount on componentDidMount
             initialized: boolean;
         }
 
         class View extends React.PureComponent<Props, State> {
-            private canonicalKeys: {
-                [key: string]: string;
-            };
-
-            private lastProps: {
-                [key: string]: ExtendedContextState<Params>;
-            } = {};
-
-            private defaultParamsPerRequest: {
-                [key: string]: Params;
-            } = {};
-
-            private defaultParams?: Params;
-
-            private api: Context;
+            public static contextType = RequestContext;
 
             public constructor(props: Props) {
                 super(props);
 
+                this.canonicalKeys = this.generateCanonicalKeys(requestKeys);
                 this.state = {
                     initialized: false,
-                };
-
-                this.canonicalKeys = this.generateCanonicalKeys(requestKeys);
-
-                // NOTE: placeholder api
-                this.api = {
-                    startRequest: () => console.error('api.startRequest not defined'),
-                    stopRequest: () => console.error('api.stopRequest not defined'),
-                    state: {},
                 };
             }
 
@@ -79,7 +54,10 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                         // Not that any request is running but calling stop makes
                         // sure that request coordinator state is reset for key
                         // and that this client will be rerendered.
-                        this.api.stopRequest(key);
+                        const {
+                            context: { stopRequest },
+                        } = this;
+                        stopRequest(key);
                     }
                 });
 
@@ -94,9 +72,9 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                         return;
                     }
 
-                    const propNames: string[] = Array.isArray(onPropsChanged)
-                        ? onPropsChanged as string[]
-                        : Object.keys(onPropsChanged);
+                    const propNames: (keyof Props)[] = Array.isArray(onPropsChanged)
+                        ? onPropsChanged
+                        : Object.keys(onPropsChanged) as (keyof Props)[];
 
                     const args = {
                         prevProps,
@@ -111,23 +89,49 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                             return false;
                         }
                         if (!Array.isArray(onPropsChanged)) {
-                            const onPropsChangedForProp = onPropsChanged[propName];
+                            // tslint:disable-next-line max-line-length
+                            // eslint-disable-next-line import/prefer-default-export, max-len
+                            const onPropsChangedForProp: InjectionFunctionWithPrev<Props, Params, boolean> | undefined = onPropsChanged[propName];
+
+                            // NOTE: onPropsChangedForProp should always be defined as we are
+                            // iterating on keys of onPropsChanged
+                            if (!onPropsChangedForProp) {
+                                return false;
+                            }
                             return resolve(onPropsChangedForProp, args);
                         }
                         return true;
                     });
 
                     if (makeRequest) {
+                        // NOTE: should this also not pass requests[key].isUnique to startRequest
                         this.startRequest(key, args.params);
                     }
                 });
             }
 
             public componentWillUnmount() {
+                const {
+                    context: { stopRequest },
+                } = this;
                 requestsNonPersistent.forEach((key) => {
-                    this.api.stopRequest(key);
+                    stopRequest(key);
                 });
             }
+
+            private canonicalKeys: {
+                [key: string]: string;
+            };
+
+            private lastProps: {
+                [key: string]: ExtendedContextState<Params>;
+            } = {};
+
+            private defaultParamsPerRequest: {
+                [key: string]: Params;
+            } = {};
+
+            private defaultParams?: Params;
 
             private generateCanonicalKeys = (keys: string[]) => {
                 const seed = randomString(16);
@@ -156,7 +160,11 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                 this.defaultParams = params;
             }
 
-            private startRequest = (key: string, params?: Params, ignoreIfExists?: boolean) => {
+            private startRequest = (
+                key: string,
+                params?: Params,
+                ignoreIfExists?: boolean,
+            ) => {
                 const request = requests[key];
                 const myArgs = {
                     params,
@@ -165,12 +173,16 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
 
                 const {
                     // @ts-ignore only capturing these values
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
                     isUnique,
                     // @ts-ignore only capturing these values
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
                     onPropsChanged,
                     // @ts-ignore only capturing these values
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
                     onMount,
                     // @ts-ignore only capturing these values
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
                     isPersistent,
 
                     onSuccess,
@@ -192,7 +204,10 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                 type onFailureArgument = FirstArgument<CoordinatorAttributes['onFailure']>;
                 type onFatalArgument = FirstArgument<CoordinatorAttributes['onFatal']>;
 
-                this.api.startRequest(
+                const {
+                    context: { startRequest },
+                } = this;
+                startRequest(
                     {
                         key: this.getCanonicalKey(key),
 
@@ -229,8 +244,10 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
 
             private calculatePropForKey = (key: string) => {
                 const accessKey = this.getCanonicalKey(key);
-                // NOTE: why set emptyObject as value
-                const prop = this.api.state[accessKey] || emptyObject;
+                const {
+                    context: { state: contextState },
+                } = this;
+                const prop = contextState[accessKey] || emptyObject;
 
                 let value = this.lastProps[key];
                 const changed = prop !== value;
@@ -239,7 +256,9 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                 // Make sure that prop is not created every time
                 // and is only changed when state[accessKey] is changed.
                 if (changed) {
+                    const { initialized } = this.state;
                     value = {
+                        pending: !initialized && requestsOnMount.includes(key),
                         ...prop,
                         setDefaultParams: (params: Params) => (
                             this.setDefaultParamsPerRequest(key, params)
@@ -247,7 +266,12 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                         do: (params?: Params) => (
                             this.startRequest(key, this.getParams(key, params))
                         ),
-                        abort: () => this.api.stopRequest(key),
+                        abort: () => {
+                            const {
+                                context: { stopRequest },
+                            } = this;
+                            stopRequest(key);
+                        },
                     };
                     this.lastProps[key] = value;
                 }
@@ -273,25 +297,6 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                 );
             }
 
-            private renderWrappedComponent = (api: Context) => {
-                this.api = api;
-                const { initialized } = this.state;
-
-                if (!initialized) {
-                    return null;
-                }
-
-                const props = this.calculateRequests();
-
-                return (
-                    <WrappedComponent
-                        setDefaultRequestParams={this.setDefaultRequestParams}
-                        requests={props}
-                        {...this.props}
-                    />
-                );
-            }
-
             private getProps = (props: Props) => (
                 Object.assign(
                     {
@@ -303,15 +308,20 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
             )
 
             public render() {
+                const props = this.calculateRequests();
+
                 return (
-                    <RequestContext.Consumer>
-                        {this.renderWrappedComponent}
-                    </RequestContext.Consumer>
+                    <WrappedComponent
+                        setDefaultRequestParams={this.setDefaultRequestParams}
+                        requests={props}
+                        {...this.props}
+                    />
                 );
             }
         }
 
         // tslint:disable-next-line max-line-length
+        // eslint-disable-next-line import/prefer-default-export, max-len
         return hoistNonReactStatics<React.ComponentType<Props>, React.ComponentType<NewProps<Props, Params>>>(
             View,
             WrappedComponent,

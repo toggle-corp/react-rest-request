@@ -40,7 +40,10 @@ export interface ContextState {
 }
 
 export interface Context {
-    startRequest(requestData: CoordinatorAttributes, ignoreIfExists?: boolean): void;
+    startRequest(
+        requestData: CoordinatorAttributes,
+        ignoreIfExists?: boolean,
+    ): void;
     stopRequest(key: string): void;
     state: { [key: string]: ContextState };
 }
@@ -59,19 +62,18 @@ export type ExtendedContextState<Params> = ExtensionState<Params> & ContextState
 // CLIENT ATTRIBUTES
 
 export type NewProps<Props, Params> = {
-} & {
     requests: { [key: string]: ExtendedContextState<Params> };
     setDefaultRequestParams: (params: Params) => void;
 } & Props & { children?: React.ReactNode };
 
 export interface InjectionFunction<Props, Params, T> {
-    (args: { props: NewProps<Props, Params>; params?: Params }): T;
+    (args: { props: NewProps<Props, Params>; params: Params | undefined }): T;
 }
 export interface InjectionFunctionWithPrev<Props, Params, T> {
-    (args: { props: NewProps<Props, Params>; prevProps: Props; params?: Params }): T;
+    (args: { props: NewProps<Props, Params>; prevProps: Props; params: Params | undefined }): T;
 }
 export interface InjectionFunctionForFunction<A, R, Props, Params> {
-    (arg: (A & { props: NewProps<Props, Params>; params?: Params })): R;
+    (arg: (A & { props: NewProps<Props, Params>; params: Params | undefined })): R;
 }
 type Resolve<P, Props, Params> = P extends (args: infer A) => infer R
     ? InjectionFunctionForFunction<A, R, Props, Params>

@@ -9,6 +9,7 @@ const defaultState = {
 };
 
 // tslint:disable-next-line variable-name
+// eslint-disable-next-line import/prefer-default-export
 export const RequestContext = React.createContext<Context>(
     defaultState,
 );
