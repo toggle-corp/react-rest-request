@@ -8,6 +8,7 @@ import {
     ClientAttributes,
     ExtendedContextState,
     NewProps,
+    InjectionFunctionWithPrev,
 } from './declarations';
 
 const emptyObject = {};
@@ -21,36 +22,20 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
         const requestsNonPersistent = requestKeys.filter(key => !requests[key].isPersistent);
         const requestsConsumed = consume || requestKeys;
 
-        class View extends React.PureComponent<Props> {
+        interface State {
+            initialized: boolean;
+        }
+
+        class View extends React.PureComponent<Props, State> {
             public static contextType = RequestContext;
 
             public constructor(props: Props) {
                 super(props);
 
                 this.canonicalKeys = this.generateCanonicalKeys(requestKeys);
-            }
-
-            public componentWillMount() {
-                // call one api here to initialize everything
-                const props = this.getProps(this.props);
-
-                requestsOnMount.forEach((key) => {
-                    const args = {
-                        params: this.getParams(key),
-                        props,
-                    };
-                    const { onMount } = requests[key];
-
-                    if (!!onMount && resolve(onMount, args)) {
-                        // Don't actually start the request but be prepared
-                        this.startRequest(key, args.params, requests[key].isUnique, true);
-                    } else {
-                        // Not that any request is running but calling stop makes
-                        // sure that request coordinator state is reset for key
-                        // and that this client will be rerendered.
-                        this.context.stopRequest(key);
-                    }
-                });
+                this.state = {
+                    initialized: false,
+                };
             }
 
             public componentDidMount() {
@@ -65,8 +50,18 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
 
                     if (!!onMount && resolve(onMount, args)) {
                         this.startRequest(key, args.params, requests[key].isUnique);
+                    } else {
+                        // Not that any request is running but calling stop makes
+                        // sure that request coordinator state is reset for key
+                        // and that this client will be rerendered.
+                        const {
+                            context: { stopRequest },
+                        } = this;
+                        stopRequest(key);
                     }
                 });
+
+                this.setState({ initialized: true });
             }
 
             public componentDidUpdate(prevProps: Props) {
@@ -77,9 +72,9 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                         return;
                     }
 
-                    const propNames: string[] = Array.isArray(onPropsChanged)
-                        ? onPropsChanged as string[]
-                        : Object.keys(onPropsChanged);
+                    const propNames: (keyof Props)[] = Array.isArray(onPropsChanged)
+                        ? onPropsChanged
+                        : Object.keys(onPropsChanged) as (keyof Props)[];
 
                     const args = {
                         prevProps,
@@ -94,7 +89,15 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                             return false;
                         }
                         if (!Array.isArray(onPropsChanged)) {
-                            const onPropsChangedForProp = onPropsChanged[propName];
+                            // tslint:disable-next-line max-line-length
+                            // eslint-disable-next-line import/prefer-default-export, max-len
+                            const onPropsChangedForProp: InjectionFunctionWithPrev<Props, Params, boolean> | undefined = onPropsChanged[propName];
+
+                            // NOTE: onPropsChangedForProp should always be defined as we are
+                            // iterating on keys of onPropsChanged
+                            if (!onPropsChangedForProp) {
+                                return false;
+                            }
                             return resolve(onPropsChangedForProp, args);
                         }
                         return true;
@@ -108,8 +111,11 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
             }
 
             public componentWillUnmount() {
+                const {
+                    context: { stopRequest },
+                } = this;
                 requestsNonPersistent.forEach((key) => {
-                    this.context.stopRequest(key);
+                    stopRequest(key);
                 });
             }
 
@@ -158,7 +164,6 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                 key: string,
                 params?: Params,
                 ignoreIfExists?: boolean,
-                placeholder?: boolean,
             ) => {
                 const request = requests[key];
                 const myArgs = {
@@ -199,7 +204,10 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                 type onFailureArgument = FirstArgument<CoordinatorAttributes['onFailure']>;
                 type onFatalArgument = FirstArgument<CoordinatorAttributes['onFatal']>;
 
-                this.context.startRequest(
+                const {
+                    context: { startRequest },
+                } = this;
+                startRequest(
                     {
                         key: this.getCanonicalKey(key),
 
@@ -231,14 +239,15 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                         ...otherProps,
                     },
                     ignoreIfExists,
-                    placeholder,
                 );
             }
 
             private calculatePropForKey = (key: string) => {
                 const accessKey = this.getCanonicalKey(key);
-                // NOTE: why set emptyObject as value
-                const prop = this.context.state[accessKey] || emptyObject;
+                const {
+                    context: { state: contextState },
+                } = this;
+                const prop = contextState[accessKey] || emptyObject;
 
                 let value = this.lastProps[key];
                 const changed = prop !== value;
@@ -247,7 +256,9 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                 // Make sure that prop is not created every time
                 // and is only changed when state[accessKey] is changed.
                 if (changed) {
+                    const { initialized } = this.state;
                     value = {
+                        pending: !initialized && requestsOnMount.includes(key),
                         ...prop,
                         setDefaultParams: (params: Params) => (
                             this.setDefaultParamsPerRequest(key, params)
@@ -255,7 +266,12 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                         do: (params?: Params) => (
                             this.startRequest(key, this.getParams(key, params))
                         ),
-                        abort: () => this.context.stopRequest(key),
+                        abort: () => {
+                            const {
+                                context: { stopRequest },
+                            } = this;
+                            stopRequest(key);
+                        },
                     };
                     this.lastProps[key] = value;
                 }
@@ -305,7 +321,7 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
         }
 
         // tslint:disable-next-line max-line-length
-        // eslint-disable-next-line max-len
+        // eslint-disable-next-line import/prefer-default-export, max-len
         return hoistNonReactStatics<React.ComponentType<Props>, React.ComponentType<NewProps<Props, Params>>>(
             View,
             WrappedComponent,

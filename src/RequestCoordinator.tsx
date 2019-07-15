@@ -37,12 +37,6 @@ export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes
     } = attributes;
 
     class Coordinator extends React.Component<Props, Context['state']> {
-        private mounted: boolean = false;
-
-        private requests: { [key: string]: Request } = {};
-
-        private requestGroups: { [key: string]: string[] } = {};
-
         public constructor(props: Props) {
             super(props);
             this.state = {};
@@ -59,6 +53,12 @@ export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes
             this.forEachRequest(request => request.stop());
             this.mounted = false;
         }
+
+        private mounted: boolean = false;
+
+        private requests: { [key: string]: Request } = {};
+
+        private requestGroups: { [key: string]: string[] } = {};
 
         private forEachRequest = (callback: (data: Request) => void) => {
             Object.keys(this.requests).forEach((key) => {
@@ -77,7 +77,7 @@ export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes
         }
 
         // called as api by children
-        private startRequest: Context['startRequest'] = (requestData, ignoreIfExists, placeholder = false) => {
+        private startRequest: Context['startRequest'] = (requestData, ignoreIfExists) => {
             const {
                 key,
                 group,
@@ -137,7 +137,7 @@ export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes
                 }
             }
 
-            if (this.mounted && !placeholder) {
+            if (this.mounted) {
                 this.requests[key].start();
             }
         }
