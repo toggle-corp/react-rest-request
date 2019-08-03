@@ -304,6 +304,7 @@ export class RestRequest {
                 errorMessage: 'Error while parsing json',
                 errorCode: null,
             });
+            return;
         }
 
         if (this.logInfo) {

@@ -11,7 +11,19 @@ import {
 
 const emptyObject = {};
 
+/*
+interface Verbosity {
+    showLog?: boolean;
+    showError?: boolean;
+    showWarning?: boolean;
+
+    showRequest?: boolean;
+    showResponse?: boolean;
+}
+*/
+
 interface Attributes<Props, NewProps>{
+    // verbosity: Verbosity;
     transformUrl?(url: string, props: Props): string;
     transformProps(props: Props): NewProps;
     transformParams(data: CoordinatorAttributes, props: Props): object;
