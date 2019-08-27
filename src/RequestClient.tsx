@@ -219,21 +219,21 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                         options: resolve(options, myArgs),
                         extras: resolve(extras, myArgs),
 
-                        onSuccess: (args: onSuccessArgument) => {
-                            if (onSuccess) {
+                        onSuccess: onSuccess
+                            ? (args: onSuccessArgument) => {
                                 onSuccess({ ...args, ...myArgs });
                             }
-                        },
-                        onFailure: (args: onFailureArgument) => {
-                            if (onFailure) {
+                            : undefined,
+                        onFailure: onFailure
+                            ? (args: onFailureArgument) => {
                                 onFailure({ ...args, ...myArgs });
                             }
-                        },
-                        onFatal: (args: onFatalArgument) => {
-                            if (onFatal) {
+                            : undefined,
+                        onFatal: onFatal
+                            ? (args: onFatalArgument) => {
                                 onFatal({ ...args, ...myArgs });
                             }
-                        },
+                            : undefined,
 
                         // TODO: resolve other methods as well
                         ...otherProps,
