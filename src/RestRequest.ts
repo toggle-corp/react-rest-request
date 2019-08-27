@@ -46,7 +46,7 @@ export function parseUrlParams(stringParams: string) {
  * Accept a key-value pair and transform to query string
  */
 interface UrlParams {
-    [key: string]: Maybe<string | number | (string | number)[]>;
+    [key: string]: Maybe<string | number | boolean | (string | number | boolean)[]>;
 }
 
 export function prepareUrlParams(params: UrlParams) {
@@ -60,7 +60,7 @@ export function prepareUrlParams(params: UrlParams) {
             let val: string;
             if (Array.isArray(param)) {
                 val = param.join(',');
-            } else if (typeof param === 'number') {
+            } else if (typeof param === 'number' || typeof param === 'boolean') {
                 val = String(param);
             } else {
                 val = param;
