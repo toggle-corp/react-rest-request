@@ -29,6 +29,8 @@ interface Attributes<Props, NewProps>{
     transformParams(data: CoordinatorAttributes, props: Props): object;
     transformResponse?(body: object, data: CoordinatorAttributes): object;
     transformErrors?(body: object, data: CoordinatorAttributes): object;
+    onFailure?(value: { error: object; status: number }): void;
+    onFatal?(value: { error: object }): void;
 }
 
 interface Request {
@@ -46,6 +48,8 @@ export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes
         transformErrors,
         transformProps,
         transformUrl,
+        onFailure: onFailureDefault,
+        onFatal: onFatalDefault,
     } = attributes;
 
     class Coordinator extends React.Component<Props, Context['state']> {
@@ -231,6 +235,8 @@ export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes
             const { onFailure } = data;
             if (onFailure) {
                 onFailure({ error, status });
+            } else if (onFailureDefault) {
+                onFailureDefault({ error, status });
             }
 
             const { state } = this;
@@ -249,6 +255,8 @@ export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes
             const { onFatal } = data;
             if (onFatal) {
                 onFatal({ error });
+            } else if (onFatalDefault) {
+                onFatalDefault({ error });
             }
 
             const { state } = this;
