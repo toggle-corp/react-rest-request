@@ -24,6 +24,7 @@ interface Verbosity {
 
 interface Attributes<Props, NewProps>{
     // verbosity: Verbosity;
+    // TODO: inject data: CoordinatorAttributes to transformUrl as well
     transformUrl?(url: string, props: Props): string;
     transformProps(props: Props): NewProps;
     transformParams(data: CoordinatorAttributes, props: Props): object;
