@@ -1,6 +1,6 @@
 {
     "name": "@togglecorp/react-rest-request",
-    "version": "2.5.0",
+    "version": "2.5.0-beta.2",
     "description": "Rest request library for react app",
     "files": "build",
     "main": "build/index.js",
@@ -29,6 +29,7 @@
     "homepage": "https://github.com/toggle-corp/react-rest-request#readme",
     "dependencies": {
         "@togglecorp/fujs": "^1.8.0",
+        "abort-controller": "^3.0.0",
         "hoist-non-react-statics": "^3.3.0"
     },
     "devDependencies": {

@@ -1,4 +1,5 @@
-import { Maybe, isNotDefined, isDefined, noOp, resolve } from '@togglecorp/fujs';
+import AbortController from 'abort-controller';
+import { Maybe, isNotDefined, isDefined, resolve } from '@togglecorp/fujs';
 
 export enum methods {
     POST = 'POST',
@@ -7,22 +8,6 @@ export enum methods {
     DELETE = 'DELETE',
     PATCH = 'PATCH',
 }
-
-const createPlaceholderFn = (
-    text: string,
-    logInfo: boolean,
-    logWarning: boolean,
-) => (
-    _: string,
-    response?: object,
-) => {
-    if (logWarning) {
-        console.warn(text);
-    }
-    if (response && logInfo) {
-        console.log(response);
-    }
-};
 
 /*
  * Parse url params and return an key-value pair
@@ -84,29 +69,33 @@ export interface HandlerFunc {
 
 export interface RestAttributes {
     key: string;
-
     url: string | TransformFunc<string, string>;
     params: object | TransformFunc<string, object>;
 
+    // initial delay
     delay?: number;
 
+    // retry
     shouldRetry?: boolean;
     retryTime?: number;
     maxRetryAttempts?: number;
 
+    // polling
     shouldPoll?: PollFunc;
     pollTime?: number;
     maxPollAttempts?: number;
 
+    // verbosity
     logWarning?: boolean;
     logInfo?: boolean;
+
+    // lifecycle
+    onInitialize?: TransformFunc<string, void>;
+    onAbort?: TransformFunc<string, void>;
+    onPreLoad?: TransformFunc<string, void>;
     onSuccess?: HandlerFunc;
     onFailure?: HandlerFunc;
     onFatal?: HandlerFunc;
-    onAbort?: TransformFunc<string, void>;
-
-    onInitialize?: TransformFunc<string, void>;
-    onPreLoad?: TransformFunc<string, void>;
     onPostLoad?: TransformFunc<string, void>;
     onAfterLoad?: TransformFunc<string, void>;
 }
@@ -133,21 +122,21 @@ export class RestRequest {
 
     private maxPollAttempts?: number;
 
-    private success: HandlerFunc;
+    private onSuccess?: HandlerFunc;
 
-    private failure: HandlerFunc;
+    private onFailure?: HandlerFunc;
 
-    private fatal: HandlerFunc;
+    private onFatal?: HandlerFunc;
 
-    private abort: TransformFunc<string, void>;
+    private onAbort?: TransformFunc<string, void>;
 
-    private preLoad: TransformFunc<string, void>;
+    private onPreLoad?: TransformFunc<string, void>;
 
-    private initialize: TransformFunc<string, void>;
+    private onInitialize?: TransformFunc<string, void>;
 
-    private postLoad: TransformFunc<string, void>;
+    private onPostLoad?: TransformFunc<string, void>;
 
-    private afterLoad: TransformFunc<string, void>;
+    private onAfterLoad?: TransformFunc<string, void>;
 
     private logWarning: boolean;
 
@@ -155,15 +144,17 @@ export class RestRequest {
 
     private pollId?: number;
 
-    private pollCount: number = 1;
+    private pollCount: number;
 
     private retryId?: number;
 
-    private retryCount: number = 1;
+    private retryCount: number;
 
-    private aborted: boolean = false;
+    private requestRunning: boolean;
 
-    private requestCompleted: boolean = false;
+    private requestAborted: boolean;
+
+    private controller: AbortController;
 
     public constructor({
         key,
@@ -195,33 +186,8 @@ export class RestRequest {
         this.key = key;
         this.url = url;
         this.params = params;
-        this.delay = delay;
 
-        this.success = onSuccess || createPlaceholderFn(
-            'No success callback defined',
-            logInfo,
-            logWarning,
-        );
-        this.failure = onFailure || createPlaceholderFn(
-            'No failure callback defined',
-            logInfo,
-            logWarning,
-        );
-        this.fatal = onFatal || createPlaceholderFn(
-            'No fatal callback defined',
-            logInfo,
-            logWarning,
-        );
-        this.abort = onAbort || createPlaceholderFn(
-            'No abort callback defined',
-            logInfo,
-            logWarning,
-        );
-
-        this.initialize = onInitialize || noOp;
-        this.preLoad = onPreLoad || noOp;
-        this.postLoad = onPostLoad || noOp;
-        this.afterLoad = onAfterLoad || noOp;
+        // Logging
 
         this.logWarning = logWarning;
         this.logInfo = logInfo;
@@ -237,40 +203,104 @@ export class RestRequest {
         this.retryTime = retryTime;
         this.maxRetryAttempts = maxRetryAttempts;
         this.shouldRetry = shouldRetry;
+
+        // Delay
+
+        this.delay = delay;
+
+        // Lifecycle
+
+        this.onInitialize = onInitialize;
+        this.onAbort = onAbort;
+        this.onPreLoad = onPreLoad;
+        this.onSuccess = onSuccess;
+        this.onFailure = onFailure;
+        this.onFatal = onFatal;
+        this.onPostLoad = onPostLoad;
+        this.onAfterLoad = onAfterLoad;
+
+        // Internal variables
+
+        this.pollCount = 1;
+        this.retryCount = 1;
+        this.requestRunning = false;
+        this.requestAborted = false;
+
+        this.controller = new AbortController();
     }
 
     public start = () => {
-        // NOTE: pre load should be called as request is sure to be called
-        this.initialize(this.key);
-
-        this.retryId = window.setTimeout(this.internalStart, this.delay);
-    }
-
-    private internalStart = async () => {
-        if (this.aborted) {
+        if (this.requestAborted) {
+            this.consoleWarn((urlValue, parameters) => [
+                `Trying to start aborted request: ${urlValue}`, parameters
+            ])
             return;
         }
 
-        this.preLoad(this.key);
+        if (this.requestRunning) {
+            this.consoleWarn((urlValue, parameters) => [
+                `Trying to start running request: ${urlValue}`, parameters
+            ])
+            return;
+        }
+
+        this.setRunningStart();
+
+        // NOTE: pre load should be called as request is sure to be called
+        if (this.onInitialize) {
+            this.onInitialize(this.key);
+        }
+
+        this.retryId = window.setTimeout(this.request, this.delay);
+    }
+
+    public stop = () => {
+        // NOTE: Don't stop request that is not running
+        // NOTE: even when RestRequest.stop is called request may still be running
+        if (!this.requestRunning) {
+            return;
+        }
+
+        clearTimeout(this.pollId);
+        clearTimeout(this.retryId);
+
+        this.requestAborted = true;
+        this.controller.abort();
+
+        this.consoleLog(() => {
+            const urlValue = resolve(this.url, this.key);
+            return [`Stopping: ${urlValue}`];
+        })
+
+        if (this.onAbort) {
+            this.onAbort(this.key);
+        }
+    }
+
+    private request = async () => {
+        if (this.onPreLoad) {
+            this.onPreLoad(this.key);
+        }
 
         const urlValue = resolve(this.url, this.key);
         const parameters = resolve(this.params, this.key);
-        if (this.logInfo) {
-            console.log(`Fetching ${urlValue}`, parameters);
-        }
+
+        this.consoleLog(() => [`Fetching: ${urlValue}`, parameters]);
 
         let response;
         try {
-            response = await fetch(urlValue, parameters);
-            if (this.aborted) {
+            const { signal } = this.controller;
+            response = await fetch(urlValue, { ...parameters, signal });
+            if (this.requestAborted) {
+                this.setRunningComplete();
                 return;
             }
         } catch (ex) {
-            if (this.aborted) {
+            if (this.requestAborted) {
+                this.setRunningComplete();
                 return;
             }
-
-            // Most probably a network error has occured
+            // Most probably a network error has occurred
             console.error(ex);
             const retrySuccessful = this.shouldRetry && this.retry();
             if (!retrySuccessful) {
@@ -282,23 +312,23 @@ export class RestRequest {
             return;
         }
 
-        let responseBody;
+        let responseBody: object = {};
         try {
-            responseBody = await response.text();
-            if (this.aborted) {
+            const responseText = await response.text();
+            if (this.requestAborted) {
+                this.setRunningComplete();
                 return;
             }
-
-            if (responseBody.length === 0) {
-                responseBody = undefined;
-            } else {
-                responseBody = JSON.parse(responseBody);
+            if (responseText.length > 0) {
+                responseBody = JSON.parse(responseText);
             }
         } catch (ex) {
-            if (this.aborted) {
+            if (this.requestAborted) {
+                this.setRunningComplete();
                 return;
             }
-
+            // Most probably a error with json parse
+            console.error(ex);
             // Most probably a json parse error
             this.handleFatal({
                 errorMessage: 'Error while parsing json',
@@ -307,9 +337,8 @@ export class RestRequest {
             return;
         }
 
-        if (this.logInfo) {
-            console.log(`Recieving ${urlValue}`, responseBody);
-        }
+        this.consoleLog(() => [`Receiving: ${urlValue}`, responseBody]);
+
         if (response.ok) {
             if (this.shouldPoll && this.shouldPoll(responseBody, response.status)) {
                 this.poll();
@@ -332,38 +361,15 @@ export class RestRequest {
         }
     }
 
-    public stop = () => {
-        if (this.requestCompleted) {
-            return;
-        }
-
-        const urlValue = resolve(this.url, this.key);
-
-        if (urlValue && this.logInfo) {
-            console.log(`Stopping ${urlValue}`);
-        }
-
-        clearTimeout(this.pollId);
-        clearTimeout(this.retryId);
-
-        this.pollCount = 1;
-        this.retryCount = 1;
-        this.aborted = true;
-
-        this.abort(this.key);
-    }
-
     private retry = () => {
         if (this.maxRetryAttempts >= 0 && this.retryCount > this.maxRetryAttempts) {
-            if (this.logWarning) {
-                const urlValue = resolve(this.url, this.key);
-                const parameters = resolve(this.params, this.key);
-                console.warn(`Max no. of retries exceeded ${urlValue}`, parameters);
-            }
+            this.consoleWarn((urlValue, parameters) => [
+                `Max retries exceeded: ${urlValue}`, parameters
+            ]);
             return false;
         }
 
-        this.retryId = window.setTimeout(this.internalStart, this.retryTime);
+        this.retryId = window.setTimeout(this.request, this.retryTime);
         this.retryCount += 1;
 
         return true;
@@ -371,48 +377,97 @@ export class RestRequest {
 
     private poll = () => {
         if (this.maxPollAttempts && this.pollCount > this.maxPollAttempts) {
-            if (this.logWarning) {
-                const urlValue: string = resolve(this.url, this.key);
-                const parameters: object = resolve(this.params, this.key);
-                console.warn(`Max no. of polls exceeded ${urlValue}`, parameters);
-            }
+            this.consoleWarn((urlValue, parameters) => [
+                `Max polls exceeded: ${urlValue}`, parameters
+            ]);
             return;
         }
 
-        this.pollId = window.setTimeout(this.internalStart, this.pollTime);
         this.pollCount += 1;
+        this.pollId = window.setTimeout(this.request, this.pollTime);
     }
 
+    private setRunningStart = () => {
+        this.requestRunning = true;
+    }
+
+    private setRunningComplete = () => {
+        this.requestRunning = false;
+        this.requestAborted = false;
+    }
+
+    // utils
+
+    private consoleLog = (method: () => any[]) => {
+        if (this.logInfo) {
+            console.log('RestRequest:', ...method());
+        }
+    }
+
+    private consoleWarn = (method: (urlValue: string, parameters: unknown) => any[]) => {
+        if (this.logWarning) {
+            const urlValue = resolve(this.url, this.key);
+            const parameters = resolve(this.params, this.key);
+            console.warn('RestRequest:', ...method(urlValue, parameters));
+        }
+    }
+
+    // handlers
+
     private handleSuccess = (responseBody: object, status: number = 0) => {
-        if (this.aborted) {
-            return;
+        if (this.onPostLoad) {
+            this.onPostLoad(this.key);
         }
 
-        this.requestCompleted = true;
-        this.postLoad(this.key);
-        this.success(this.key, responseBody, status);
-        this.afterLoad(this.key);
+        if (this.onSuccess) {
+            this.onSuccess(this.key, responseBody, status);
+        } else {
+            this.consoleWarn((urlValue, parameters) => [
+                `No success callback defined: ${urlValue}`, parameters
+            ]);
+        }
+
+        if (this.onAfterLoad) {
+            this.onAfterLoad(this.key);
+        }
+        this.setRunningComplete();
     }
 
     private handleFailure = (responseBody: object, status: number = 0) => {
-        if (this.aborted) {
-            return;
+        if (this.onPostLoad) {
+            this.onPostLoad(this.key);
         }
 
-        this.requestCompleted = true;
-        this.postLoad(this.key);
-        this.failure(this.key, responseBody, status);
-        this.afterLoad(this.key);
+        if (this.onFailure) {
+            this.onFailure(this.key, responseBody, status);
+        } else {
+            this.consoleWarn((urlValue, parameters) => [
+                `No failure callback defined: ${urlValue}`, parameters
+            ]);
+        }
+
+        if (this.onAfterLoad) {
+            this.onAfterLoad(this.key);
+        }
+        this.setRunningComplete();
     }
 
     private handleFatal = (responseBody: object, status: number = 0) => {
-        if (this.aborted) {
-            return;
+        if (this.onPostLoad) {
+            this.onPostLoad(this.key);
         }
 
-        this.requestCompleted = true;
-        this.postLoad(this.key);
-        this.fatal(this.key, responseBody, status);
-        this.afterLoad(this.key);
+        if (this.onFatal) {
+            this.onFatal(this.key, responseBody, status);
+        } else {
+            this.consoleWarn((urlValue, parameters) => [
+                `No fatal callback defined: ${urlValue}`, parameters
+            ]);
+        }
+
+        if (this.onAfterLoad) {
+            this.onAfterLoad(this.key);
+        }
+        this.setRunningComplete();
     }
 }

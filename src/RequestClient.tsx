@@ -54,10 +54,7 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                         // Not that any request is running but calling stop makes
                         // sure that request coordinator state is reset for key
                         // and that this client will be rerendered.
-                        const {
-                            context: { stopRequest },
-                        } = this;
-                        stopRequest(key);
+                        this.stopRequest(key);
                     }
                 });
 
@@ -111,17 +108,10 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
             }
 
             public componentWillUnmount() {
-                const {
-                    context: { stopRequest },
-                } = this;
                 requestsNonPersistent.forEach((key) => {
-                    stopRequest(key);
+                    this.stopRequest(key);
                 });
             }
-
-            private canonicalKeys: {
-                [key: string]: string;
-            };
 
             private lastProps: {
                 [key: string]: ExtendedContextState<Params>;
@@ -132,6 +122,10 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
             } = {};
 
             private defaultParams?: Params;
+
+            private canonicalKeys: {
+                [key: string]: string;
+            };
 
             private generateCanonicalKeys = (keys: string[]) => {
                 const seed = randomString(16);
@@ -207,9 +201,12 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                 const {
                     context: { startRequest },
                 } = this;
+
+                const accessKey = this.getCanonicalKey(key);
+
                 startRequest(
                     {
-                        key: this.getCanonicalKey(key),
+                        key: accessKey,
 
                         group: resolve(group, myArgs),
                         method: resolve(method, myArgs),
@@ -219,21 +216,21 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                         options: resolve(options, myArgs),
                         extras: resolve(extras, myArgs),
 
-                        onSuccess: (args: onSuccessArgument) => {
-                            if (onSuccess) {
+                        onSuccess: onSuccess
+                            ? (args: onSuccessArgument) => {
                                 onSuccess({ ...args, ...myArgs });
                             }
-                        },
-                        onFailure: (args: onFailureArgument) => {
-                            if (onFailure) {
+                            : undefined,
+                        onFailure: onFailure
+                            ? (args: onFailureArgument) => {
                                 onFailure({ ...args, ...myArgs });
                             }
-                        },
-                        onFatal: (args: onFatalArgument) => {
-                            if (onFatal) {
+                            : undefined,
+                        onFatal: onFatal
+                            ? (args: onFatalArgument) => {
                                 onFatal({ ...args, ...myArgs });
                             }
-                        },
+                            : undefined,
 
                         // TODO: resolve other methods as well
                         ...otherProps,
@@ -242,19 +239,35 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                 );
             }
 
-            private calculatePropForKey = (key: string) => {
+            private stopRequest = (key: string) => {
+                const {
+                    context: { stopRequest },
+                } = this;
+
+                const accessKey = this.getCanonicalKey(key);
+                stopRequest(accessKey);
+            }
+
+            private readRequestState = (key: string) => {
                 const accessKey = this.getCanonicalKey(key);
                 const {
-                    context: { state: contextState },
+                    context: {
+                        state: {
+                            [accessKey]: prop = emptyObject,
+                        },
+                    },
                 } = this;
-                const prop = contextState[accessKey] || emptyObject;
+                return prop;
+            }
 
+            private calculatePropForKey = (key: string) => {
+                const prop = this.readRequestState(key);
                 let value = this.lastProps[key];
                 const changed = prop !== value;
 
                 // Props need to be memoized.
                 // Make sure that prop is not created every time
-                // and is only changed when state[accessKey] is changed.
+                // and is only changed when prop is changed.
                 if (changed) {
                     const { initialized } = this.state;
                     value = {
@@ -267,10 +280,7 @@ export function createRequestClient<Props extends object, Params>(requests: { [k
                             this.startRequest(key, this.getParams(key, params))
                         ),
                         abort: () => {
-                            const {
-                                context: { stopRequest },
-                            } = this;
-                            stopRequest(key);
+                            this.stopRequest(key);
                         },
                     };
                     this.lastProps[key] = value;
