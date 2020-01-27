@@ -21,7 +21,7 @@ export interface CoordinatorAttributes {
     method: string;
     url: string;
     body?: object;
-    query?: { [key: string]: string[] | string | number | undefined };
+    query?: { [key: string]: (string | number | boolean)[] | string | number | boolean | undefined };
     options?: Partial<RestAttributes>;
     extras?: object;
 
