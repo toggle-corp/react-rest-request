@@ -178,7 +178,7 @@ export class RestRequest {
 
         delay = 50,
         logWarning = true,
-        logInfo = true,
+        logInfo = false,
     }: RestAttributes) {
         this.key = key;
         this.url = url;
