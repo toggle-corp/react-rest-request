@@ -24,8 +24,7 @@ interface Verbosity {
 
 interface Attributes<Props, NewProps>{
     // verbosity: Verbosity;
-    // TODO: inject data: CoordinatorAttributes to transformUrl as well
-    transformUrl?(url: string, props: Props): string;
+    transformUrl?(url: string, data: CoordinatorAttributes, props: Props): string;
     transformProps(props: Props): NewProps;
     transformParams(data: CoordinatorAttributes, props: Props): object;
     transformResponse?(body: object, data: CoordinatorAttributes): object;
@@ -122,7 +121,7 @@ export const createRequestCoordinator = <Props, NewProps>(attributes: Attributes
             const request = new RestRequest({
                 ...options,
                 key,
-                url: transformUrl ? transformUrl(preparedUrl, this.props) : preparedUrl,
+                url: transformUrl ? transformUrl(preparedUrl, requestData, this.props) : preparedUrl,
                 params: calculateParams,
                 onPreLoad: this.handleRequestStart,
                 onInitialize: this.handleRequestStart,
