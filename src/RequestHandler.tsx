@@ -6,7 +6,7 @@ import { createRequestClient } from './RequestClient';
 interface JustProps {
     url: string;
     method: string;
-    query?: { [key: string]: string | number | undefined };
+    query?: { [key: string]: string | number | boolean | undefined };
     body?: object;
     options?: Partial<RestAttributes>;
     changeParams: unknown;

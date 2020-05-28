@@ -1,5 +1,6 @@
 import AbortController from 'abort-controller';
-import { Maybe, isNotDefined, isDefined, resolve } from '@togglecorp/fujs';
+import { isNotDefined, isDefined, resolve } from '@togglecorp/fujs';
+import { UrlParams } from './declarations';
 
 export enum methods {
     POST = 'POST',
@@ -30,10 +31,6 @@ export function parseUrlParams(stringParams: string) {
 /*
  * Accept a key-value pair and transform to query string
  */
-interface UrlParams {
-    [key: string]: Maybe<string | number | boolean | (string | number | boolean)[]>;
-}
-
 export function prepareUrlParams(params: UrlParams) {
     return Object.keys(params)
         .filter(k => isDefined(params[k]))
@@ -181,7 +178,7 @@ export class RestRequest {
 
         delay = 50,
         logWarning = true,
-        logInfo = true,
+        logInfo = false,
     }: RestAttributes) {
         this.key = key;
         this.url = url;

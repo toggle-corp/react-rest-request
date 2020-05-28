@@ -1,5 +1,6 @@
 import React from 'react';
 import { RestAttributes } from './RestRequest';
+import { Maybe } from '@togglecorp/fujs';
 
 // TYPES
 
@@ -13,6 +14,10 @@ type NonOptionalKeys<T> = {
 
 // COORDINATOR ATTRIBUTES
 
+export interface UrlParams {
+    [key: string]: Maybe<string | number | boolean | (string | number | boolean)[]>;
+}
+
 // should be able to have other values
 export interface CoordinatorAttributes {
     key: string;
@@ -21,7 +26,7 @@ export interface CoordinatorAttributes {
     method: string;
     url: string;
     body?: object;
-    query?: { [key: string]: string[] | string | number | undefined };
+    query?: UrlParams;
     options?: Partial<RestAttributes>;
     extras?: object;
 
